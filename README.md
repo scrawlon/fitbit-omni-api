@@ -62,7 +62,7 @@ Request Header parameter, 'Accept-Locale'. A call to API-Search-Foods might look
 def fibit_foods_search
   params = {
     'api-method'      => 'api-search-foods',
-    'query'           => 'pumpkin beer',
+    'query'           => 'buffalo chicken',
     'response-format' => 'json',
     'Accept-Locale'   => 'en_US',
   }
@@ -90,4 +90,4 @@ Resource Access API. NOTE: To subscribe to ALL of a user's changes, make 'collec
 
 ## Copyright
 
-Copyright (c) 2012 TK Gospodinov. See [LICENSE](https://github.com/tkgospodinov/omniauth-fitbit/blob/master/LICENSE.md) for details.
+Copyright (c) 2012 TK Gospodinov, (c) Scott McGrath 2013. See [LICENSE](https://github.com/tkgospodinov/omniauth-fitbit/blob/master/LICENSE.md) for details.
