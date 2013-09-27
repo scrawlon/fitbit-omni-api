@@ -1,5 +1,5 @@
 require 'sinatra'
-require 'omniauth-fitbit'
+require 'fitbit-omni-api'
 
 use Rack::Session::Cookie
 use OmniAuth::Builder do

@@ -1,4 +1,4 @@
-# OmniAuth Fitbit Strategy
+# Fitbit OmniAuth Strategy
 
 This gem is an OmniAuth 1.0+ Strategy for the [Fitbit API](https://wiki.fitbit.com/display/API/OAuth+Authentication+in+the+Fitbit+API).
 
@@ -7,7 +7,7 @@ This gem is an OmniAuth 1.0+ Strategy for the [Fitbit API](https://wiki.fitbit.c
 Add the strategy to your `Gemfile`:
 
 ```ruby
-gem 'omniauth-fitbit'
+gem 'fitbit-omni-api'
 ```
 
 Then integrate the strategy into your middleware:
@@ -77,7 +77,7 @@ def fibit_foods_search
 end
 ```
 
-A few notes: 'api-version' defaults to '1' and can be omitted from OmniAuth Fitbit API calls.
+A few notes: 'api-version' defaults to '1' and can be omitted from Fitbit-Omni-Api calls.
 If you omit the 'response-format', the response will be in the default xml format.
 Some authenticated API methods can be accessed without auth tokens, if you supply a user's
 user-id (see the API docs for details).
