@@ -59,7 +59,7 @@ the API-Search-Foods method requires 'api-version', 'query' and 'response-format
 Request Header parameter, 'Accept-Locale'. A call to API-Search-Foods might look like this:
 
 ```ruby
-def fibit_foods_search
+def fitbit_foods_search
   params = {
     'api-method'      => 'api-search-foods',
     'query'           => 'buffalo chicken',
