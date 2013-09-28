@@ -52,7 +52,7 @@ Fitbit::Api.new({}).api_call(
 )
 ```
 
-OmniAuth Fitbit supports the Fitbit Resource Access API and the Fitbit Subscriptions API.
+This gem supports the Fitbit Resource Access API and the Fitbit Subscriptions API.
 
 To access the Resource Access API, consult the API docs and provide the required parameters. For example,
 the API-Search-Foods method requires 'api-version', 'query' and 'response-format'. There's also an optional
