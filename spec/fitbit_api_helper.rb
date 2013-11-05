@@ -115,6 +115,7 @@ module FitbitApiHelper
         error << "(#{count}) #{required[x]} "
         count += 1
       end
+      error << "You supplied: #{supplied}"
     else
       error = "requires #{required_data}. You're missing #{required-supplied}."
     end

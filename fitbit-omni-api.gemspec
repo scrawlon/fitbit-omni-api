@@ -8,8 +8,8 @@ Gem::Specification.new do |s|
   s.authors     = ["TK Gospodinov", "Scott McGrath"]
   s.email       = ["tk@gospodinov.net", "Scott McGrat"]
   s.homepage    = "http://github.com/scrawlon/fitbit-omni-api"
-  s.summary     = %q{OmniAuth strategy for Fitbit, plus api wrapper}
-  s.description = %q{OmniAuth strategy for Fitbit, plus api wrapper}
+  s.summary     = %q{Fitbit OmniAuth strategy + API wrapper}
+  s.description = %q{Fitbit OmniAuth strategy + API wrapper}
   s.license     = "MIT"
 
   s.files         = Dir["{app,config,db,lib}/**/*"] + ["LICENSE.md", "Rakefile", "README.md"]
