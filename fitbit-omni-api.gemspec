@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.name        = "fitbit-omni-api"
   s.version     = OmniAuth::Fitbit::Api::VERSION
   s.authors     = ["TK Gospodinov", "Scott McGrath"]
-  s.email       = ["tk@gospodinov.net", "Scott McGrat"]
+  s.email       = ["tk@gospodinov.net", "acid64k@yahoo.com"]
   s.homepage    = "http://github.com/scrawlon/fitbit-omni-api"
   s.summary     = %q{Fitbit OmniAuth strategy + API wrapper}
   s.description = %q{Fitbit OmniAuth strategy + API wrapper}
@@ -17,6 +17,5 @@ Gem::Specification.new do |s|
   s.test_files    = s.files.grep(%r{^(test|spec|features)/})
   s.require_paths = ["lib"]
 
-  s.add_runtime_dependency 'omniauth-oauth', '~> 1.0'
-  s.add_runtime_dependency 'multi_xml'
+  s.add_runtime_dependency 'omniauth-fitbit', '~> 1.0'
 end

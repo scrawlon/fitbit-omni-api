@@ -1,3 +1,5 @@
+require 'omniauth-fitbit'
+
 module Fitbit
   class Api < OmniAuth::Strategies::Fitbit
     
