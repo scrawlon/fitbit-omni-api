@@ -7,7 +7,7 @@ describe "OmniAuth::Strategies::Fitbit" do
 
   context 'client options' do
     it 'has correct OAuth endpoint' do
-      subject.options.client_options.site.should eq('http://api.fitbit.com')
+      subject.options.client_options.site.should eq('https://api.fitbit.com')
     end
 
     it 'has correct request token url' do

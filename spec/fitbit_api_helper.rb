@@ -80,7 +80,7 @@ module FitbitApiHelper
     data_type = 'post_parameters' unless error_type == 'url_parameters' or error_type == 'resource_path'
     data_type ||= error_type
     fitbit_methods = subject.get_fitbit_methods
-    fitbit_methods[api_method][data_type] if fitbit_methods[api_method]
+    fitbit_methods[api_method][data_type.to_sym] if fitbit_methods[api_method]
   end
 
   def get_required_post_parameters required, error_type
