@@ -27,7 +27,7 @@ module Fitbit
 
     def get_api_error params, fitbit, auth_token="", auth_secret="" 
       if params and fitbit
-        no_auth_tokens = true if (auth_token == "" or auth_secret == "")
+        no_auth_tokens = auth_token == "" or auth_secret == ""
         get_error_message(params, fitbit, no_auth_tokens)
       else
         "is not a valid Fitbit API method." 
