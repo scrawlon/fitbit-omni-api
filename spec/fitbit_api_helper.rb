@@ -6,7 +6,7 @@ module FitbitApiHelper
     when :date_range
       base_date = Date.today
       end_date = base_date + rand(365)
-      [base_date, end_date].map { |day| day.strftime('%y-%m-%d').squeeze(' ') }
+      [base_date, end_date].map { |day| day.strftime('%Y-%m-%d').squeeze(' ') }
     when :fitbit_id
       length = 7
       ([*('A'..'Z'),*('0'..'9')]-%w(0 1 I O)).sample(length).join

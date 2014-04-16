@@ -4,14 +4,16 @@ module Fitbit
   class Api < OmniAuth::Strategies::Fitbit
     
     def api_call consumer_key, consumer_secret, params, auth_token="", auth_secret=""
-      fitbit = get_api_method(params['api-method']) if params['api-method']
-      api_error = get_api_error(params, fitbit, auth_token, auth_secret)
-      if api_error
+      begin 
+        fitbit_api_method = get_api_method(params['api-method']) if params['api-method']
+        verify_api_call(params, fitbit_api_method, auth_token, auth_secret)
+      rescue Exception => e
+        raise e
+        api_error = get_api_error(params, fitbit_api_method, auth_token, auth_secret)
         raise "#{params['api-method']} " + api_error
-      else
-        access_token = build_request(consumer_key, consumer_secret, auth_token, auth_secret)
-        send_api_request(params, fitbit, access_token)
       end
+      access_token = build_request(consumer_key, consumer_secret, auth_token, auth_secret)
+      send_api_request(params, fitbit_api_method, access_token)
     end
 
     def get_fitbit_methods
@@ -23,6 +25,11 @@ module Fitbit
     def get_api_method api_method
       api_method.downcase!
       @@fitbit_methods[api_method] 
+    end
+
+    def verify_api_call params, fitbit_api_method, auth_token="", auth_secret=""
+      api_error = get_api_error(params, fitbit_api_method, auth_token, auth_secret)
+      raise "#{params['api-method']} " + api_error if api_error
     end
 
     def get_api_error params, fitbit, auth_token="", auth_secret="" 
@@ -551,6 +558,19 @@ module Fitbit
         :http_method         => 'get',
         :url_parameters      => ['date'],
         :resources           => ['user', '-', 'heart', 'date', '<date>'],
+      },
+      'api-get-intraday-time-series' => {
+        :auth_required       => true,
+        :http_method         => 'get',
+        :request_headers     => ['Accept-Language'],
+        :url_parameters      => {
+          'date'             => ['resource-path', 'date'],
+          'start-time'       => ['resource-path', 'date', 'start-time', 'end-time'],
+        },
+        :resources           => {
+          'date'             => ['user', '-', '<resource-path>', 'date', '<date>'],
+          'start-time'       => ['user', '-', '<resource-path>', 'date', '<date>', '<start-time>', '<end-time>'],
+        },
       },
       'api-get-invites' => {
         :auth_required       => true,

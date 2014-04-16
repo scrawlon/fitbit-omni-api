@@ -422,24 +422,31 @@ describe Fitbit::Api do
     end
   end
 
-#  context 'API-Get-Intraday-Time-Series method' do
-#    before(:each) do
-#      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@date_range[1]}.#{@response_format}"
-#      @params = {
-#        'api-method'          => 'API-Get-Intraday-Time-Series',
-#        'response-format'     => @response_format,
-#        'base-date'           => @date_range[0],
-#        'end-date'            => @date_range[1],
-#        'period'              => @period,
-#        'resource-path'       => @resource_path,
-#      }
-#    end
-#
-#    it 'should create API-Get-Intraday-Time-Series <base-date>/<end-date> OAuth request' do
-#      @params.delete('period')
-#      oauth_authenticated :get, @api_url, @consumer_key, @consumer_secret, @params, @auth_token, @auth_secret
-#    end
-#
+  context 'API-Get-Intraday-Time-Series method' do
+    before(:each) do
+      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}.#{@response_format}"
+      @params = {
+        'api-method'          => 'API-Get-Intraday-Time-Series',
+        'response-format'     => @response_format,
+        'resource-path'       => @resource_path,
+        'date'                => @date_range[0], # yyyy-MM-dd
+#        'detail-level'        => '15min',
+#        'start-time'          => '11:00',
+#        'end-tome'            => '12:00',
+      }
+    end
+
+    it 'should create API-Get-Intraday-Time-Series <date> OAuth request' do
+      oauth_authenticated :get, @api_url, @consumer_key, @consumer_secret, @params, @auth_token, @auth_secret
+    end
+
+    it 'should create API-Get-Intraday-Time-Series <start-time> OAuth request' do
+      @params['start-time'] = @time
+      @params['end-time'] = @time
+      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@time}/#{@time}.#{@response_format}"
+      oauth_authenticated :get, @api_url, @consumer_key, @consumer_secret, @params, @auth_token, @auth_secret
+    end
+
 #    it 'should create API-Get-Intraday-Time-Series <base-date>/<period> OAuth request' do
 #      @params.delete('end-date')
 #      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@period}.#{@response_format}"
@@ -452,7 +459,7 @@ describe Fitbit::Api do
 #      @api_url = "/1/user/#{@fitbit_id}/#{@resource_path}/date/#{@date_range[0]}/#{@period}.#{@response_format}"
 #      oauth_unauthenticated :get, @api_url, @consumer_key, @consumer_secret, @params
 #    end
-#  end
+  end
 
   context 'API-Delete-Subscription method' do
     before(:each) do
