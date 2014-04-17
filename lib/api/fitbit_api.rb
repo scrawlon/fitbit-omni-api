@@ -5,12 +5,10 @@ module Fitbit
     
     def api_call consumer_key, consumer_secret, params, auth_token="", auth_secret=""
       begin 
-        fitbit_api_method = get_api_method(params['api-method']) if params['api-method']
+        fitbit_api_method = get_api_method(params['api-method'])
         verify_api_call(params, fitbit_api_method, auth_token, auth_secret)
-      rescue Exception => e
+      rescue => e
         raise e
-        api_error = get_api_error(params, fitbit_api_method, auth_token, auth_secret)
-        raise "#{params['api-method']} " + api_error
       end
       access_token = build_request(consumer_key, consumer_secret, auth_token, auth_secret)
       send_api_request(params, fitbit_api_method, access_token)
@@ -23,79 +21,74 @@ module Fitbit
     private 
 
     def get_api_method api_method
+      return nil unless api_method and api_method.is_a? String
       api_method.downcase!
-      @@fitbit_methods[api_method] 
+      @@fitbit_methods[api_method]
     end
 
-    def verify_api_call params, fitbit_api_method, auth_token="", auth_secret=""
-      api_error = get_api_error(params, fitbit_api_method, auth_token, auth_secret)
+    def verify_api_call params, fitbit_api_method, auth_token, auth_secret
+      if fitbit_api_method
+        api_error = get_error_message(params.keys, fitbit_api_method, auth_token, auth_secret)
+      else
+        api_error = "is not a valid Fitbit API method."
+      end
       raise "#{params['api-method']} " + api_error if api_error
     end
 
-    def get_api_error params, fitbit, auth_token="", auth_secret="" 
-      if params and fitbit
-        no_auth_tokens = auth_token == "" or auth_secret == ""
-        get_error_message(params, fitbit, no_auth_tokens)
-      else
-        "is not a valid Fitbit API method." 
-      end
+    def get_error_message params_keys, fitbit, auth_token, auth_secret
+      no_auth_tokens = auth_token == "" or auth_secret == ""
+      error = missing_post_parameters_error fitbit[:post_parameters], params_keys
+      error = missing_url_parameters_error fitbit[:url_parameters], params_keys unless error
+      error = missing_auth_tokens_error fitbit[:auth_required], params_keys, no_auth_tokens unless error
+      return error if error
     end
 
-    def get_error_message params, fitbit, no_auth_tokens
-      if missing_url_parameters? fitbit[:url_parameters], params.keys
-        url_parameters_error(fitbit[:url_parameters], params.keys)
-      elsif missing_post_parameters? fitbit[:post_parameters], params.keys
-        post_parameters_error(fitbit[:post_parameters], params.keys)
-      elsif fitbit[:auth_required] and no_auth_tokens
-        auth_error(fitbit[:auth_required], params.keys.include?('user-id'))
-      end
-    end
-
-    def missing_url_parameters? required, supplied
-      url_parameters = get_url_parameters(required, supplied)
-      url_parameters and url_parameters & supplied != url_parameters
-    end
-
-    def get_url_parameters required, supplied
-      if required.is_a? Hash
-        get_dynamic_url_parameters(required, supplied)
-      else
-        required
-      end
-    end
-
-    def get_dynamic_url_parameters required, supplied
-      required.keys.each { |k| return required[k] if supplied.include? k }
-    end
-
-    def missing_post_parameters? required, supplied
-      return false unless required
-      error = nil
+    def missing_post_parameters_error required, supplied
+      return nil unless required
       required.each do |k,v|
         supplied_required = required[k] & supplied if k != 'required_if'
         case k
         when 'required'
-          error = k if supplied_required != required[k]
+          return "requires POST parameters #{required[k]}. You're missing #{required[k]-supplied}." if supplied_required != required[k]
         when 'exclusive'
-          error = k + '_too_few' if supplied_required.length < 1
-          error = k + '_too_many' if supplied_required.length > 1
+          return "requires one of these POST parameters: #{required[k]}." if supplied_required.length < 1
+          supplied_required_string = supplied_required.join(' AND ')
+          return "allows only one of these POST parameters #{required[k]}. You used #{supplied_required_string}." if supplied_required.length > 1
         when 'one_required'
-          error = k if supplied_required.length < 1
+          return "requires at least one of the following POST parameters: #{required[k]}." if supplied_required.length < 1
         when 'required_if'
           required[k].each do |key,val|
-            error = k if supplied.include? key and !supplied.include? val
+            if supplied.include? key and !supplied.include? val
+              return "requires POST parameter #{val} when you use POST parameter #{key}." if supplied.include? key and !supplied.include? val
+            end
           end
         end
       end
-      error
+      nil
     end
 
-    def url_parameters_error required, supplied
-      if required.is_a? Hash
-        get_dynamic_url_error(required, supplied)
-      else
-        "requires #{required}. You're missing #{required-supplied}."
+    def missing_auth_tokens_error auth_required, params_keys, no_auth_tokens
+      return nil unless auth_required
+      if auth_required == 'user-id' and no_auth_tokens and !params_keys.include? 'user-id'
+        "requires user auth_token and auth_secret, unless you include [\"user-id\"]."
+      elsif auth_required != 'user-id' and no_auth_tokens
+        "requires user auth_token and auth_secret."
       end
+    end
+
+    def missing_url_parameters_error required, supplied
+      return nil unless required
+      if required.is_a? Hash
+        required_hash = get_dynamic_url_parameters(required, supplied)
+        return get_dynamic_url_error(required, supplied) if required_hash & supplied != required_hash
+      elsif required & supplied != required
+        return "requires #{required}. You're missing #{required-supplied}."
+      end
+      nil
+    end
+
+    def get_dynamic_url_parameters required, supplied
+      required.keys.each { |k| return required[k] if supplied.include? k }
     end
 
     def get_dynamic_url_error required, supplied
@@ -104,39 +97,6 @@ module Fitbit
         error << "(#{i+1}) #{required[x]} "
       end
       error << "You supplied: #{supplied}"
-    end
-
-    def post_parameters_error required, supplied
-      error_type = missing_post_parameters? required, supplied
-      e = 'exclusive' if error_type == 'exclusive_too_few' or error_type == 'exclusive_too_many'
-      e ||= error_type
-
-      case error_type
-      when 'required'
-        "requires POST parameters #{required[e]}. You're missing #{required[e]-supplied}."
-      when 'exclusive_too_few'
-        "requires one of these POST parameters: #{required[e]}."
-      when 'exclusive_too_many'
-        supplied_required = required[e] & supplied
-        supplied_required_string = supplied_required.join(' AND ')
-        "allows only one of these POST parameters #{required[e]}. You used #{supplied_required_string}."
-      when 'one_required'
-        "requires at least one of the following POST parameters: #{required[e]}."
-      when 'required_if'
-        required[e].each do |k,v|
-          if supplied.include? k and !supplied.include? v
-            return "requires POST parameter #{v} when you use POST parameter #{k}."
-          end
-        end
-      end
-    end
-
-    def auth_error auth_required, auth_supplied
-      if auth_required == 'user-id' and !auth_supplied
-        "requires user auth_token and auth_secret, unless you include [\"user-id\"]."
-      elsif auth_required != 'user-id'
-        "requires user auth_token and auth_secret."
-      end
     end
 
     def build_request consumer_key, consumer_secret, auth_token, auth_secret
@@ -190,6 +150,11 @@ module Fitbit
       dynamic_url = add_ids(params, api_ids, api_resources, fitbit[:auth_required]) if api_ids or params['user-id']
       dynamic_url ||= api_resources
       dynamic_url.join("/")
+    end
+
+    def get_url_parameters required, supplied
+      required = get_dynamic_url_parameters(required, supplied) if required.is_a? Hash
+      required
     end
 
     def add_ids params, api_ids, api_resources, auth_required
