@@ -27,48 +27,62 @@ module Fitbit
     end
 
     def verify_api_call params, fitbit_api_method, auth_token, auth_secret
-      if fitbit_api_method
-        api_error = get_error_message(params.keys, fitbit_api_method, auth_token, auth_secret)
-      else
-        api_error = "is not a valid Fitbit API method."
-      end
+      api_error = "is not a valid Fitbit API method."
+      api_error = get_error_message(params.keys, fitbit_api_method, auth_token, auth_secret) if fitbit_api_method
       raise "#{params['api-method']} " + api_error if api_error
     end
 
     def get_error_message params_keys, fitbit, auth_token, auth_secret
-      no_auth_tokens = auth_token == "" or auth_secret == ""
       error = missing_post_parameters_error fitbit[:post_parameters], params_keys
       error = missing_url_parameters_error fitbit[:url_parameters], params_keys unless error
-      error = missing_auth_tokens_error fitbit[:auth_required], params_keys, no_auth_tokens unless error
+      error = missing_auth_tokens_error fitbit[:auth_required], params_keys, auth_token, auth_secret unless error
       return error if error
     end
 
     def missing_post_parameters_error required, supplied
       return nil unless required
       required.each do |k,v|
-        supplied_required = required[k] & supplied if k != 'required_if'
+        supplied_required = v & supplied unless k == 'required_if'
         case k
         when 'required'
-          return "requires POST parameters #{required[k]}. You're missing #{required[k]-supplied}." if supplied_required != required[k]
+          return missing_required_post_parameters_error(v, v-supplied) if supplied_required != v 
         when 'exclusive'
-          return "requires one of these POST parameters: #{required[k]}." if supplied_required.length < 1
-          supplied_required_string = supplied_required.join(' AND ')
-          return "allows only one of these POST parameters #{required[k]}. You used #{supplied_required_string}." if supplied_required.length > 1
+          supplied_length = supplied_required.length
+          return missing_exclusive_post_parameters_error(v, supplied_required, supplied_length) if supplied_length != 1
         when 'one_required'
-          return "requires at least one of the following POST parameters: #{required[k]}." if supplied_required.length < 1
+          return missing_one_required_post_parameters_error(v) if supplied_required.length < 1
         when 'required_if'
-          required[k].each do |key,val|
-            if supplied.include? key and !supplied.include? val
-              return "requires POST parameter #{val} when you use POST parameter #{key}." if supplied.include? key and !supplied.include? val
-            end
-          end
+          return missing_required_if_post_parameters_error(v, supplied)
         end
       end
       nil
     end
 
-    def missing_auth_tokens_error auth_required, params_keys, no_auth_tokens
+    def missing_required_post_parameters_error required, missing
+      "requires POST parameters #{required}. You're missing #{missing}."
+    end
+
+    def missing_exclusive_post_parameters_error required, supplied_required, supplied_length
+      supplied_required_string = supplied_required.join(' AND ')
+      return "requires one of these POST parameters: #{required}." if supplied_length < 1
+      return "allows only one of these POST parameters #{required}. You used #{supplied_required_string}." if supplied_length > 1
+    end
+
+    def missing_one_required_post_parameters_error required
+      return "requires at least one of the following POST parameters: #{required}."
+    end
+
+    def missing_required_if_post_parameters_error required, supplied
+      required.each do |key,val|
+        if supplied.include? key and !supplied.include? val
+          return "requires POST parameter #{val} when you use POST parameter #{key}."
+        end
+      end
+    end
+
+    def missing_auth_tokens_error auth_required, params_keys, auth_token, auth_secret
       return nil unless auth_required
+      no_auth_tokens = auth_token == "" or auth_secret == ""
       if auth_required == 'user-id' and no_auth_tokens and !params_keys.include? 'user-id'
         "requires user auth_token and auth_secret, unless you include [\"user-id\"]."
       elsif auth_required != 'user-id' and no_auth_tokens
@@ -79,24 +93,25 @@ module Fitbit
     def missing_url_parameters_error required, supplied
       return nil unless required
       if required.is_a? Hash
-        required_hash = get_dynamic_url_parameters(required, supplied)
-        return get_dynamic_url_error(required, supplied) if required_hash & supplied != required_hash
+        return get_dynamic_url_error(required, supplied)
       elsif required & supplied != required
         return "requires #{required}. You're missing #{required-supplied}."
       end
       nil
     end
 
-    def get_dynamic_url_parameters required, supplied
-      required.keys.each { |k| return required[k] if supplied.include? k }
-    end
-
     def get_dynamic_url_error required, supplied
+      required_hash = get_dynamic_url_parameters(required, supplied)
+      return nil unless required_hash & supplied != required_hash
       error = "requires 1 of #{required.length} options: "
-      required.keys.each_with_index do |x,i|
-        error << "(#{i+1}) #{required[x]} "
+      required.keys.each_with_index do |k,i|
+        error << "(#{i+1}) #{required[k]} "
       end
       error << "You supplied: #{supplied}"
+    end
+
+    def get_dynamic_url_parameters required, supplied
+      required.keys.each { |k| return required[k] if supplied.include? k }
     end
 
     def build_request consumer_key, consumer_secret, auth_token, auth_secret
@@ -104,43 +119,16 @@ module Fitbit
       OAuth::AccessToken.new fitbit.consumer, auth_token, auth_secret
     end
 
-    def send_api_request params, fitbit, access_token
-      http_method = fitbit[:http_method]
-      request_url = build_url(params, fitbit, http_method)
-      request_headers = get_request_headers(params, fitbit) if fitbit[:request_headers]
-
-      if http_method == 'get' or http_method == 'delete'
-        access_token.request( http_method, "http://api.fitbit.com#{request_url}", request_headers )
-      else
-        access_token.request( http_method, "http://api.fitbit.com#{request_url}", "",  request_headers )
-      end
-    end
-
     def build_url params, fitbit, http_method
-      api_version = @@api_version
-      api_url_resources = get_url_resources(params, fitbit)
-      api_format = get_response_format(params['response-format'])
-      api_post_parameters = get_post_parameters(params, fitbit) if http_method == 'post'
-      api_query = uri_encode_query(params['query'])
+      api = {
+        :version            => params['api_version'] ? params['api_version'] : @@api_version,
+        :url_resources      => get_url_resources(params, fitbit),
+        :format             => params['response-format'] ? params['response-format'].downcase : 'xml',
+        :post_parameters    => get_post_parameters(params, fitbit, http_method),
+        :query              => uri_encode_query(params['query']),
+      }
 
-      "/#{api_version}/#{api_url_resources}.#{api_format}#{api_query}#{api_post_parameters}"
-    end
-
-    def get_post_parameters params, fitbit
-      return nil if is_subscription? params['api-method']
-      not_post_parameters = [:request_headers, :url_parameters]
-      ignore = ['api-method', 'response-format']
-      not_post_parameters.each do |x|
-        fitbit[x].each { |y| ignore.push(y) } if fitbit[x] 
-      end
-      post_parameters = params.select { |k,v| !ignore.include? k }
-
-      "?" + OAuth::Helper.normalize(post_parameters)
-    end
-    
-    def get_request_headers params, fitbit
-      request_headers = fitbit[:request_headers]
-      params.select { |k,v| request_headers.include? k }
+      "/#{api[:version]}/#{api[:url_resources]}.#{api[:format]}#{api[:query]}#{api[:post_parameters]}"
     end
 
     def get_url_resources params, fitbit
@@ -175,16 +163,41 @@ module Fitbit
       end
     end
 
+    def get_post_parameters params, fitbit, http_method
+      return nil if http_method != 'post' or is_subscription? params['api-method']
+      not_post_parameters = [:request_headers, :url_parameters]
+      ignore = ['api-method', 'response-format']
+      not_post_parameters.each do |x|
+        fitbit[x].each { |y| ignore.push(y) } if fitbit[x] 
+      end
+      post_parameters = params.select { |k,v| !ignore.include? k }
+
+      "?" + OAuth::Helper.normalize(post_parameters)
+    end
+    
+    def get_request_headers params, fitbit
+      request_headers = fitbit[:request_headers]
+      params.select { |k,v| request_headers.include? k }
+    end
+
     def is_subscription? api_method
       api_method == 'api-create-subscription' or api_method == 'api-delete-subscription'
     end
 
-    def get_response_format api_format
-      api_format ? api_format.downcase : 'xml'
-    end
-
     def uri_encode_query query
       query ? "?" + OAuth::Helper.normalize({ 'query' => query }) : ""
+    end
+
+    def send_api_request params, fitbit, access_token
+      http_method = fitbit[:http_method]
+      request_url = build_url(params, fitbit, http_method)
+      request_headers = get_request_headers(params, fitbit) if fitbit[:request_headers]
+
+      if http_method == 'get' or http_method == 'delete'
+        access_token.request( http_method, "http://api.fitbit.com#{request_url}", request_headers )
+      else
+        access_token.request( http_method, "http://api.fitbit.com#{request_url}", "",  request_headers )
+      end
     end
 
     @@api_version = 1
