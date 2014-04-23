@@ -33,9 +33,8 @@ module Fitbit
     end
 
     def get_error_message params_keys, fitbit_api_method, auth_token, auth_secret
-#      error = missing_url_resources_error fitbit_api_method[:resources], params_keys
       error = missing_post_parameters_error fitbit_api_method[:post_parameters], params_keys
-      error = missing_url_parameters_error fitbit_api_method[:url_parameters], params_keys unless error
+      error = missing_url_parameters_error fitbit_api_method[:resources], params_keys unless error
       error = missing_auth_tokens_error fitbit_api_method[:auth_required], params_keys, auth_token, auth_secret unless error
       return error if error
     end
@@ -96,41 +95,39 @@ module Fitbit
         "requires user auth_token and auth_secret."
       end
     end
-    
-    def missing_url_resources_error required, supplied
-      if required.is_a? Hash
-        supplied_key = required.keys and supplied
-        required = required[supplied_key]
-      end
-      required.select! { |x| x.include? "<>" }
-      required.map! { |x| x.delete "<>" }
-      raise required
-#      required.map { |x| x.delete("<>") != x ? supplied[x.delete("<>")] : x }
-#      raise required.join(" - ")
-    end
 
     def missing_url_parameters_error required, supplied
       return nil unless required
       if required.is_a? Hash
-        return get_dynamic_url_error(required, supplied)
-      elsif required & supplied != required
-        return "requires #{required}. You're missing #{required-supplied}."
+        error = get_dynamic_url_error(required, supplied)
+      elsif
+        required = get_url_resource_variables(required)
+        error = "requires #{required}. You're missing #{required-supplied}." if required - supplied != []
       end
-      nil
+      error ||= nil
     end
 
     def get_dynamic_url_error required, supplied
-      required_hash = get_dynamic_url_parameters(required, supplied)
-      return nil unless required_hash & supplied != required_hash
+      required_array = get_dynamic_url_parameters(required, supplied)
+      required_array = get_url_resource_variables(required_array) if required_array
+      return nil unless required_array & supplied != required_array  
       error = "requires 1 of #{required.length} options: "
       required.keys.each_with_index do |k,i|
-        error << "(#{i+1}) #{required[k]} "
+        resources = get_url_resource_variables(required[k])
+        error << "(#{i+1}) #{resources} "
       end
       error << "You supplied: #{supplied}"
     end
 
     def get_dynamic_url_parameters required, supplied
-      required.keys.each { |k| return required[k] if supplied.include? k }
+      required = required.keys.each { |k| return required[k] if supplied.include? k }
+      nil
+    end
+
+    def get_url_resource_variables resources
+      resources = resources.select { |x| x.include? "<" }
+      resources = resources.map { |x| x.delete "<>" } if resources
+      resources ||= nil
     end
 
     def build_request consumer_key, consumer_secret, auth_token, auth_secret
@@ -152,8 +149,8 @@ module Fitbit
 
     def get_url_resources params, fitbit_api_method
       params_keys = params.keys
-      api_ids = get_url_parameters(fitbit_api_method[:url_parameters], params_keys) 
       api_resources = get_url_parameters(fitbit_api_method[:resources], params_keys)
+      api_ids = get_url_resource_variables(api_resources) 
       dynamic_url = add_ids(params, api_resources, fitbit_api_method[:auth_required]) if api_ids or params['user-id']
       dynamic_url ||= api_resources
       dynamic_url.join("/")
