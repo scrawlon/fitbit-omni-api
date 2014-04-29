@@ -40,7 +40,8 @@ module FitbitApiHelper
     api_method = supplied_api_method.downcase
     required = get_required_data(api_method, error_type)
     if error_type == 'url_parameters'
-      required_data = get_url_parameters(required, supplied)
+      required = get_dynamic_url_parameters(required, supplied) if required.is_a? Hash
+      required_data = get_url_parameters(required)
     else
       required_data = get_required_post_parameters(required, error_type)
     end
@@ -68,19 +69,19 @@ module FitbitApiHelper
     "#{api_method} " + error
   end
 
+  def get_required_data api_method, error_type
+    data_type = 'post_parameters' unless error_type == 'url_parameters' or error_type == 'resource_path'
+    data_type ||= error_type
+    fitbit_methods = subject.get_fitbit_methods
+    fitbit_methods[api_method][data_type.to_sym] if fitbit_methods[api_method]
+  end
+
   def get_required_if_error required, supplied
     required.each do |k,v|
       if supplied.include? k and !supplied.include? v
         return "requires POST parameter #{v} when you use POST parameter #{k}."
       end
     end
-  end
-
-  def get_required_data api_method, error_type
-    data_type = 'post_parameters' unless error_type == 'url_parameters' or error_type == 'resource_path'
-    data_type ||= error_type
-    fitbit_methods = subject.get_fitbit_methods
-    fitbit_methods[api_method][data_type.to_sym] if fitbit_methods[api_method]
   end
 
   def get_required_post_parameters required, error_type
@@ -93,18 +94,15 @@ module FitbitApiHelper
     end
   end
 
-  def get_url_parameters required, supplied
-    if required.is_a? Hash
-      get_dynamic_url_parameters(required, supplied)
-    else
-      required
-    end
+  def get_url_parameters url_parameters 
+    url_parameters = url_parameters.select { |x| x.include? "<" }
+    url_parameters = url_parameters.map { |x| x.delete "<>" } if url_parameters
+    url_parameters ||= nil
   end
 
   def get_dynamic_url_parameters required, supplied
-    required.keys.each do |x|
-      return required[x] if supplied.include? x
-    end
+    required = required.keys.each { |k| return required[k] if supplied.include? k }
+    nil
   end
 
   def get_url_parameters_error required, required_data, supplied

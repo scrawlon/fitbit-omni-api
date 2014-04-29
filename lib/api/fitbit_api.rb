@@ -34,7 +34,7 @@ module Fitbit
 
     def get_error_message params_keys, fitbit_api_method, auth_token, auth_secret
       error = missing_post_parameters_error fitbit_api_method[:post_parameters], params_keys
-      error = missing_url_parameters_error fitbit_api_method[:resources], params_keys unless error
+      error = missing_url_parameters_error fitbit_api_method[:url_parameters], params_keys unless error
       error = missing_auth_tokens_error fitbit_api_method[:auth_required], params_keys, auth_token, auth_secret unless error
       return error if error
     end
@@ -101,7 +101,7 @@ module Fitbit
       if required.is_a? Hash
         error = get_dynamic_url_error(required, supplied)
       elsif
-        required = get_url_resource_variables(required)
+        required = get_url_parameters_variables(required)
         error = "requires #{required}. You're missing #{required-supplied}." if required - supplied != []
       end
       error ||= nil
@@ -109,12 +109,12 @@ module Fitbit
 
     def get_dynamic_url_error required, supplied
       required_array = get_dynamic_url_parameters(required, supplied)
-      required_array = get_url_resource_variables(required_array) if required_array
+      required_array = get_url_parameters_variables(required_array) if required_array
       return nil unless required_array & supplied != required_array  
       error = "requires 1 of #{required.length} options: "
       required.keys.each_with_index do |k,i|
-        resources = get_url_resource_variables(required[k])
-        error << "(#{i+1}) #{resources} "
+        url_parameters = get_url_parameters_variables(required[k])
+        error << "(#{i+1}) #{url_parameters} "
       end
       error << "You supplied: #{supplied}"
     end
@@ -124,10 +124,10 @@ module Fitbit
       nil
     end
 
-    def get_url_resource_variables resources
-      resources = resources.select { |x| x.include? "<" }
-      resources = resources.map { |x| x.delete "<>" } if resources
-      resources ||= nil
+    def get_url_parameters_variables url_parameters
+      url_parameters = url_parameters.select { |x| x.include? "<" }
+      url_parameters = url_parameters.map { |x| x.delete "<>" } if url_parameters
+      url_parameters ||= nil
     end
 
     def build_request consumer_key, consumer_secret, auth_token, auth_secret
@@ -148,9 +148,8 @@ module Fitbit
     end
 
     def get_url_resources params, fitbit_api_method
-      params_keys = params.keys
-      api_resources = get_url_parameters(fitbit_api_method[:resources], params_keys)
-      api_ids = get_url_resource_variables(api_resources) 
+      api_resources = get_url_parameters(fitbit_api_method[:url_parameters], params.keys)
+      api_ids = get_url_parameters_variables(api_resources) 
       dynamic_url = add_ids(params, api_resources, fitbit_api_method[:auth_required]) if api_ids or params['user-id']
       dynamic_url ||= api_resources
       dynamic_url.join("/")
@@ -181,7 +180,7 @@ module Fitbit
 
     def get_post_parameters params, fitbit, http_method
       return nil if http_method != 'post' or is_subscription? params['api-method']
-      not_post_parameters = [:request_headers, :url_parameters]
+      not_post_parameters = [:request_headers]
       ignore = ['api-method', 'response-format']
       not_post_parameters.each do |x|
         fitbit[x].each { |y| ignore.push(y) } if fitbit[x] 
@@ -225,26 +224,23 @@ module Fitbit
         :post_parameters     => {
           'required' => ['accept'],
         },
-        :url_parameters      => ['from-user-id'],
-        :resources           => ['user', '-', 'friends', 'invitations', '<from-user-id>'],
+        :url_parameters           => ['user', '-', 'friends', 'invitations', '<from-user-id>'],
       },
       'api-add-favorite-activity' => {
         :auth_required       => true,
         :http_method         => 'post',
-        :url_parameters      => ['activity-id'],
-        :resources           => ['user', '-', 'activities', 'favorite', '<activity-id>'],
+        :url_parameters           => ['user', '-', 'activities', 'favorite', '<activity-id>'],
       },
       'api-add-favorite-food' => {
         :auth_required       => true,
         :http_method         => 'post',
-        :url_parameters      => ['food-id'],
-        :resources           => ['user', '-', 'foods', 'log', 'favorite', '<food-id>'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'favorite', '<food-id>'],
       },
       'api-browse-activities' => {
         :auth_required       => false,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :resources           => ['activities'],
+        :url_parameters           => ['activities'],
       },
       'api-config-friends-leaderboard' => {
         :auth_required       => true,
@@ -253,7 +249,7 @@ module Fitbit
           'required' => ['hideMeFromLeaderboard'],
         },
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'friends', 'leaderboard'],
+        :url_parameters           => ['user', '-', 'friends', 'leaderboard'],
       },
       'api-create-food' => {
         :auth_required       => true,
@@ -262,7 +258,7 @@ module Fitbit
           'required' => ['name', 'defaultFoodMeasurementUnitId', 'defaultServingSize', 'calories'],
         },
         :request_headers     => ['Accept-Locale'],
-        :resources           => ['foods'],
+        :url_parameters           => ['foods'],
       },
       'api-create-invite' => {
         :auth_required       => true,
@@ -270,80 +266,68 @@ module Fitbit
         :post_parameters     =>  {
           'exclusive' => ['invitedUserEmail', 'invitedUserId'],
         },
-        :resources           => ['user', '-', 'friends', 'invitations'],
+        :url_parameters           => ['user', '-', 'friends', 'invitations'],
       },
       'api-create-subscription' => {
         :auth_required       => true,
         :http_method         => 'post',
-        :url_parameters      => ['collection-path', 'subscription-id'],
         :request_headers     => ['X-Fitbit-Subscriber-Id'],
-        :resources           => ['user', '-', '<collection-path>', 'apiSubscriptions', '<subscription-id>', '<collection-path>']
+        :url_parameters           => ['user', '-', '<collection-path>', 'apiSubscriptions', '<subscription-id>', '<collection-path>']
       },
       'api-delete-activity-log' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['activity-log-id'],
-        :resources           => ['user', '-', 'activities', '<activity-log-id>'],
+        :url_parameters           => ['user', '-', 'activities', '<activity-log-id>'],
       },
       'api-delete-blood-pressure-log' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['bp-log-id'],
-        :resources           => ['user', '-', 'bp', '<bp-log-id>'],
+        :url_parameters           => ['user', '-', 'bp', '<bp-log-id>'],
       },
       'api-delete-body-fat-log' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['body-fat-log-id'],
-        :resources           => ['user', '-', 'body', 'log', 'fat', '<body-fat-log-id>'],
+        :url_parameters           => ['user', '-', 'body', 'log', 'fat', '<body-fat-log-id>'],
       },
       'api-delete-body-weight-log' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['body-weight-log-id'],
-        :resources           => ['user', '-', 'body', 'log', 'weight', '<body-weight-log-id>'],
+        :url_parameters           => ['user', '-', 'body', 'log', 'weight', '<body-weight-log-id>'],
       },
       'api-delete-favorite-activity' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['activity-id'],
-        :resources           => ['user', '-', 'activities', 'favorite', '<activity-id>'],
+        :url_parameters           => ['user', '-', 'activities', 'favorite', '<activity-id>'],
       },
       'api-delete-favorite-food' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['food-id'],
-        :resources           => ['user', '-', 'foods', 'log', 'favorite', '<food-id>'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'favorite', '<food-id>'],
       },
       'api-delete-food-log' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['food-log-id'],
-        :resources           => ['user', '-', 'foods', 'log', '<food-log-id>'],
+        :url_parameters           => ['user', '-', 'foods', 'log', '<food-log-id>'],
       },
       'api-delete-heart-rate-log' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['heart-log-id'],
-        :resources           => ['user', '-', 'heart', '<heart-log-id>'],
+        :url_parameters           => ['user', '-', 'heart', '<heart-log-id>'],
       },
       'api-delete-sleep-log' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['sleep-log-id'],
-        :resources           => ['user', '-', 'sleep', '<sleep-log-id>'],
+        :url_parameters           => ['user', '-', 'sleep', '<sleep-log-id>'],
       },
       'api-delete-subscription' => {
         :auth_required       => 'user-id',
         :http_method         => 'delete',
-        :url_parameters      => ['collection-path', 'subscription-id'],
-        :resources           => ['user', '-', '<collection-path>', 'apiSubscriptions', '<subscription-id>', '<collection-path>']
+        :url_parameters           => ['user', '-', '<collection-path>', 'apiSubscriptions', '<subscription-id>', '<collection-path>']
       },
       'api-delete-water-log' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['water-log-id'],
-        :resources           => ['user', '-', 'foods', 'log', 'water', '<water-log-id>'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'water', '<water-log-id>'],
       },
       'api-devices-add-alarm' => {
         :auth_required       => true,
@@ -352,20 +336,17 @@ module Fitbit
           'required' => ['time', 'enabled', 'recurring', 'weekDays'],
         },
         :request_headers     => ['Accept-Language'],
-        :url_parameters      => ['device-id'],
-        :resources           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms'],
+        :url_parameters           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms'],
       },
       'api-devices-delete-alarm' => {
         :auth_required       => true,
         :http_method         => 'delete',
-        :url_parameters      => ['device-id', 'alarm-id'],
-        :resources           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms', '<alarm-id>'],
+        :url_parameters           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms', '<alarm-id>'],
       },
       'api-devices-get-alarms' => {
         :auth_required       => true,
         :http_method         => 'get',
-        :url_parameters      => ['device-id'],
-        :resources           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms'],
+        :url_parameters           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms'],
       },
       'api-devices-update-alarm' => {
         :auth_required       => true,
@@ -374,63 +355,54 @@ module Fitbit
           'required' => ['time', 'enabled', 'recurring', 'weekDays', 'snoozeLength', 'snoozeCount'],
         },
         :request_headers     => ['Accept-Language'],
-        :url_parameters      => ['device-id', 'alarm-id'],
-        :resources           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms', '<alarm-id>'],
+        :url_parameters           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms', '<alarm-id>'],
       },
       'api-get-activities' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale', 'Accept-Language'],
-        :url_parameters      => ['date'],
-        :resources           => ['user', '-', 'activities', 'date', '<date>'],
+        :url_parameters           => ['user', '-', 'activities', 'date', '<date>'],
       },
       'api-get-activity' => {
         :auth_required       => false,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :url_parameters      => ['activity-id'],
-        :resources           => ['activities', '<activity-id>'],
+        :url_parameters           => ['activities', '<activity-id>'],
       },
       'api-get-activity-daily-goals' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'activities', 'goals', 'daily'],
+        :url_parameters           => ['user', '-', 'activities', 'goals', 'daily'],
       },
       'api-get-activity-stats' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'activities'],
+        :url_parameters           => ['user', '-', 'activities'],
       },
       'api-get-activity-weekly-goals' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'activities', 'goals', 'weekly'],
+        :url_parameters           => ['user', '-', 'activities', 'goals', 'weekly'],
       },
       'api-get-badges' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :resources           => ['user', '-', 'badges'],
+        :url_parameters           => ['user', '-', 'badges'],
       },
       'api-get-blood-pressure' => {
         :auth_required       => true,
         :http_method         => 'get',
-        :url_parameters      => ['date'],
-        :resources           => ['user', '-', 'bp', 'date', '<date>'],
+        :url_parameters           => ['user', '-', 'bp', 'date', '<date>'],
       },
       'api-get-body-fat' => {
         :auth_required       => true,
         :http_method         => 'get',
-        :url_parameters      => {
-          'date'      => ['date'],
-          'end-date'  => ['base-date', 'end-date'],
-          'period'    => ['base-date', 'period'],
-        },
         :request_headers     => ['Accept-Language'],
-        :resources           => {
+        :url_parameters           => {
           'date'      => ['user', '-', 'body', 'log', 'fat', 'date', '<date>'],
           'end-date'  => ['user', '-', 'body', 'log', 'fat', 'date', '<base-date>', '<end-date>'],
           'period'    => ['user', '-', 'body', 'log', 'fat', 'date', '<base-date>', '<period>'],
@@ -439,25 +411,19 @@ module Fitbit
       'api-get-body-fat-goal' => {
         :auth_required       => true,
         :http_method         => 'get',
-        :resources           => ['user', '-', 'body', 'log', 'fat', 'goal'],
+        :url_parameters           => ['user', '-', 'body', 'log', 'fat', 'goal'],
       },
       'api-get-body-measurements' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :url_parameters      => ['date'],
-        :resources           => ['user', '-', 'body', 'date', '<date>'],
+        :url_parameters           => ['user', '-', 'body', 'date', '<date>'],
       },
       'api-get-body-weight' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :url_parameters      => {
-          'date'      => ['date'],
-          'end-date'  => ['base-date', 'end-date'],
-          'period'    => ['base-date', 'period'],
-        },
-        :resources           => {
+        :url_parameters           => {
           'date'      => ['user', '-', 'body', 'log', 'weight', 'date', '<date>'],
           'end-date'  => ['user', '-', 'body', 'log', 'weight', 'date', '<base-date>', '<end-date>'],
           'period'    => ['user', '-', 'body', 'log', 'weight', 'date', '<base-date>', '<period>'],
@@ -467,101 +433,92 @@ module Fitbit
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'body', 'log', 'weight', 'goal'],
+        :url_parameters           => ['user', '-', 'body', 'log', 'weight', 'goal'],
       },
       'api-get-device' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
-        :url_parameters      => ['device-id'],
-        :resources           => ['user', '-', 'devices', '<device-id>'],
+        :url_parameters           => ['user', '-', 'devices', '<device-id>'],
       },
       'api-get-devices' => {
         :auth_required       => true,
         :http_method         => 'get',
-        :resources           => ['user', '-', 'devices'],
+        :url_parameters           => ['user', '-', 'devices'],
       },
       'api-get-favorite-activities' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :resources           => ['user', '-', 'activities', 'favorite'],
+        :url_parameters           => ['user', '-', 'activities', 'favorite'],
       },
       'api-get-favorite-foods' => {
         :auth_required       => true,
         :http_method         => 'get',
-        :resources           => ['user', '-', 'foods', 'log', 'favorite'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'favorite'],
       },
       'api-get-food' => {
         :auth_required       => false,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :url_parameters      => ['food-id'],
-        :resources           => ['foods', '<food-id>'],
+        :url_parameters           => ['foods', '<food-id>'],
       },
       'api-get-food-goals' => {
         :auth_required       => true,
         :http_method         => 'get',
-        :resources           => ['user', '-', 'foods', 'log', 'goal'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'goal'],
       },
       'api-get-foods' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :url_parameters      => ['date'],
-        :resources           => ['user', '-', 'foods', 'log', 'date', '<date>'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'date', '<date>'],
       },
       'api-get-food-units' => {
         :auth_required       => false,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :resources           => ['foods', 'units'],
+        :url_parameters           => ['foods', 'units'],
       },
       'api-get-frequent-activities' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale', 'Accept-Language'],
-        :resources           => ['user', '-', 'activities', 'frequent'],
+        :url_parameters           => ['user', '-', 'activities', 'frequent'],
       },
       'api-get-frequent-foods' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :resources           => ['user', '-', 'foods', 'log', 'frequent'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'frequent'],
       },
       'api-get-friends' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'friends'],
+        :url_parameters           => ['user', '-', 'friends'],
       },
       'api-get-friends-leaderboard' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'friends', 'leaderboard'],
+        :url_parameters           => ['user', '-', 'friends', 'leaderboard'],
       },
       'api-get-glucose' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :url_parameters      => ['date'],
-        :resources           => ['user', '-', 'glucose', 'date', '<date>'],
+        :url_parameters           => ['user', '-', 'glucose', 'date', '<date>'],
       },
       'api-get-heart-rate' => {
         :auth_required       => true,
         :http_method         => 'get',
-        :url_parameters      => ['date'],
-        :resources           => ['user', '-', 'heart', 'date', '<date>'],
+        :url_parameters           => ['user', '-', 'heart', 'date', '<date>'],
       },
       'api-get-intraday-time-series' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :url_parameters      => {
-          'date'             => ['resource-path', 'date'],
-          'start-time'       => ['resource-path', 'date', 'start-time', 'end-time'],
-        },
-        :resources           => {
+        :url_parameters           => {
           'date'             => ['user', '-', '<resource-path>', 'date', '<date>'],
           'start-time'       => ['user', '-', '<resource-path>', 'date', '<date>', '<start-time>', '<end-time>'],
         },
@@ -569,41 +526,36 @@ module Fitbit
       'api-get-invites' => {
         :auth_required       => true,
         :http_method         => 'get',
-        :resources           => ['user', '-', 'friends', 'invitations'],
+        :url_parameters           => ['user', '-', 'friends', 'invitations'],
       },
       'api-get-meals' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :resources           => ['user', '-', 'meals'],
+        :url_parameters           => ['user', '-', 'meals'],
       },
       'api-get-recent-activities' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale', 'Accept-Language'],
-        :resources           => ['user', '-', 'activities', 'recent'],
+        :url_parameters           => ['user', '-', 'activities', 'recent'],
       },
       'api-get-recent-foods' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :resources           => ['user', '-', 'foods', 'log', 'recent'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'recent'],
       },
       'api-get-sleep' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
-        :url_parameters      => ['date'],
-        :resources           => ['user', '-', 'sleep', 'date', '<date>'],
+        :url_parameters           => ['user', '-', 'sleep', 'date', '<date>'],
       },
       'api-get-time-series' => {
         :auth_required       => 'user-id',
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :url_parameters      => {
-          'end-date'  => ['base-date', 'end-date', 'resource-path'],
-          'period'    => ['base-date', 'period', 'resource-path'],
-        },
-        :resources           => {
+        :url_parameters           => {
           'end-date'  => ['user', '-', '<resource-path>', 'date', '<base-date>', '<end-date>'],
           'period'    => ['user', '-', '<resource-path>', 'date', '<base-date>', '<period>'],
         },
@@ -612,14 +564,13 @@ module Fitbit
         :auth_required       => 'user-id',
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'profile'],
+        :url_parameters           => ['user', '-', 'profile'],
       },
       'api-get-water' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
-        :url_parameters      => ['date'],
-        :resources           => ['user', '-', 'foods', 'log', 'water', 'date', '<date>'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'water', 'date', '<date>'],
       },
       'api-log-activity' => {
         :auth_required       => true,
@@ -630,7 +581,7 @@ module Fitbit
           'required_if'  => { 'activityName' => 'manualCalories' },
         },
         :request_headers     => ['Accept-Locale', 'Accept-Language'],
-        :resources           => ['user', '-', 'activities'],
+        :url_parameters           => ['user', '-', 'activities'],
       },
       'api-log-blood-pressure' => {
         :auth_required       => true,
@@ -638,7 +589,7 @@ module Fitbit
         :post_parameters     => {
           'required' => ['systolic', 'diastolic', 'date'],
         },
-        :resources           => ['user', '-', 'bp'],
+        :url_parameters           => ['user', '-', 'bp'],
       },
       'api-log-body-fat' => {
         :auth_required       => true,
@@ -646,7 +597,7 @@ module Fitbit
         :post_parameters     => {
           'required' => ['fat', 'date'],
         },
-        :resources           => ['user', '-', 'body', 'log', 'fat'],
+        :url_parameters           => ['user', '-', 'body', 'log', 'fat'],
       },
       'api-log-body-measurements' => {
         :auth_required       => true,
@@ -656,7 +607,7 @@ module Fitbit
           'one_required' => ['bicep','calf','chest','fat','forearm','hips','neck','thigh','waist','weight'],
         },
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'body'],
+        :url_parameters           => ['user', '-', 'body'],
       },
       'api-log-body-weight' => {
         :auth_required       => true,
@@ -665,7 +616,7 @@ module Fitbit
           'required' => ['weight', 'date'],
         },
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'body', 'log', 'weight'],
+        :url_parameters           => ['user', '-', 'body', 'log', 'weight'],
       },
       'api-log-food' => {
         :auth_required       => true,
@@ -675,7 +626,7 @@ module Fitbit
           'required'  => ['mealTypeId', 'unitId', 'amount', 'date'],
         },
         :request_headers     => ['Accept-Locale'],
-        :resources           => ['user', '-', 'foods', 'log'],
+        :url_parameters           => ['user', '-', 'foods', 'log'],
       },
       'api-log-glucose' => {
         :auth_required       => true,
@@ -686,7 +637,7 @@ module Fitbit
           'required_if'  => { 'tracker' => 'glucose' },
         },
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'glucose'],
+        :url_parameters           => ['user', '-', 'glucose'],
       },
       'api-log-heart-rate' => {
         :auth_required       => true,
@@ -694,7 +645,7 @@ module Fitbit
         :post_parameters     => {
           'required' => ['tracker', 'heartRate', 'date'],
         },
-        :resources           => ['user', '-', 'heart'],
+        :url_parameters           => ['user', '-', 'heart'],
       },
       'api-log-sleep' => {
         :auth_required       => true,
@@ -702,7 +653,7 @@ module Fitbit
         :post_parameters     => {
           'required' => ['startTime', 'duration', 'date'],
         },
-        :resources           => ['user', '-', 'sleep'],
+        :url_parameters           => ['user', '-', 'sleep'],
       },
       'api-log-water' => {
         :auth_required       => true,
@@ -711,14 +662,13 @@ module Fitbit
           'required' => ['amount', 'date'],
         },
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'foods', 'log', 'water'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'water'],
       },
       'api-search-foods' => {
         :auth_required       => true,
         :http_method         => 'get',
         :request_headers     => ['Accept-Locale'],
-        :url_parameters      => ['query'],
-        :resources           => ['foods', 'search'],
+        :url_parameters           => ['foods', 'search'],
       },
       'api-update-activity-daily-goals' => {
         :auth_required       => true,
@@ -727,7 +677,7 @@ module Fitbit
           'one_required' => ['caloriesOut','activeMinutes','floors','distance','steps'],
         },
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'activities', 'goals', 'daily'],
+        :url_parameters           => ['user', '-', 'activities', 'goals', 'daily'],
       },
       'api-update-activity-weekly-goals' => {
         :auth_required       => true,
@@ -736,7 +686,7 @@ module Fitbit
           'one_required' => ['steps','distance','floors'],
         },
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'activities', 'goals', 'weekly'],
+        :url_parameters           => ['user', '-', 'activities', 'goals', 'weekly'],
       },
       'api-update-fat-goal' => {
         :auth_required       => true,
@@ -744,7 +694,7 @@ module Fitbit
         :post_parameters     => {
           'required' => ['fat'],
         },
-        :resources           => ['user', '-', 'body', 'log', 'fat', 'goal'],
+        :url_parameters           => ['user', '-', 'body', 'log', 'fat', 'goal'],
       },
       'api-update-food-goals' => {
         :auth_required       => true,
@@ -753,7 +703,7 @@ module Fitbit
           'exclusive' => ['calories', 'intensity'],
         },
         :request_headers     => ['Accept-Locale', 'Accept-Language'],
-        :resources           => ['user', '-', 'foods', 'log', 'goal'],
+        :url_parameters           => ['user', '-', 'foods', 'log', 'goal'],
       },
       'api-update-user-info' => {
         :auth_required       => true,
@@ -766,7 +716,7 @@ module Fitbit
           ],
         },
         :request_headers     => ['Accept-Language'],
-        :resources           => ['user', '-', 'profile'],
+        :url_parameters           => ['user', '-', 'profile'],
       },
       'api-update-weight-goal' => {
         :auth_required       => true,
@@ -774,9 +724,8 @@ module Fitbit
         :post_parameters     => {
           'required' => ['startDate', 'startWeight'],
         },
-        :resources           => ['user', '-', 'body', 'log', 'weight', 'goal'],
+        :url_parameters           => ['user', '-', 'body', 'log', 'weight', 'goal'],
       },
     }
-
   end
 end
