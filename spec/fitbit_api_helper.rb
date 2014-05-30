@@ -30,6 +30,10 @@ module FitbitApiHelper
     when :time
       current_time = Time.now
       current_time.strftime('%H:%M').squeeze(' ')
+    when :time_range
+      start_time = Time.now
+      end_time = start_time + (60 * 60 * rand(12))
+      [start_time, end_time].map { |time| time.strftime('%H:%M').squeeze(' ') }
     when :token
       length = 30
       rand(36**length).to_s(36)

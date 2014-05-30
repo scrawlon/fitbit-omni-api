@@ -22,6 +22,7 @@ describe Fitbit::Api do
     @period = random_data(:period)
     @resource_path = random_data(:resource_path)
     @time = random_data(:time)
+    @time_range = random_data(:time_range)
   end
 
   before(:each) do
@@ -424,26 +425,42 @@ describe Fitbit::Api do
 
   context 'API-Get-Intraday-Time-Series method' do
     before(:each) do
-      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}.#{@response_format}"
+      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@date_range[1]}.#{@response_format}"
       @params = {
         'api-method'          => 'API-Get-Intraday-Time-Series',
+        'base-date'           => @date_range[0],
+        'end-date'            => @date_range[1],
+        'period'              => @period,
         'response-format'     => @response_format,
         'resource-path'       => @resource_path,
-        'date'                => @date_range[0], # yyyy-MM-dd
-#        'detail-level'        => '15min',
-#        'start-time'          => '11:00',
-#        'end-tome'            => '12:00',
       }
     end
 
-    it 'should create API-Get-Intraday-Time-Series <date> OAuth request' do
+    it 'should create API-Get-Intraday-Time-Series <base-date>/<end-date> OAuth request' do
+      @params.delete('period')
       oauth_authenticated :get, @api_url, @consumer_key, @consumer_secret, @params, @auth_token, @auth_secret
     end
 
-    it 'should create API-Get-Intraday-Time-Series <start-time> OAuth request' do
-      @params['start-time'] = @time
-      @params['end-time'] = @time
-      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@time}/#{@time}.#{@response_format}"
+    it 'should create API-Get-Intraday-Time-Series <base-date>/<period> OAuth request' do
+      @params.delete('end-date')
+      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@period}.#{@response_format}"
+      oauth_authenticated :get, @api_url, @consumer_key, @consumer_secret, @params, @auth_token, @auth_secret
+    end
+
+    it 'should create API-Get-Intraday-Time-Series <start-time>/<end-time> OAuth request' do
+      @params['start-time'] = @time_range[0]
+      @params['end-time'] = @time_range[1]
+      @params.delete('end-date')
+      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@period}/time/#{@time_range[0]}/#{@time_range[1]}.#{@response_format}"
+      oauth_authenticated :get, @api_url, @consumer_key, @consumer_secret, @params, @auth_token, @auth_secret
+    end
+
+    it 'should create API-Get-Intraday-Time-Series <detail-level><start-time>/<end-time> OAuth request' do
+      @params['start-time'] = @time_range[0]
+      @params['end-time'] = @time_range[1]
+      @params['detail-level'] = '15min'
+      @params.delete('period')
+      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@date_range[1]}/15min/time/#{@time_range[0]}/#{@time_range[1]}.#{@response_format}"
       oauth_authenticated :get, @api_url, @consumer_key, @consumer_secret, @params, @auth_token, @auth_secret
     end
 

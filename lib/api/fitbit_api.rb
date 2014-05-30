@@ -120,7 +120,8 @@ module Fitbit
     end
 
     def get_dynamic_url_parameters required, supplied
-      required = required.keys.each { |k| return required[k] if supplied.include? k }
+      optional = get_optional_url_parameters(required, supplied)
+      required = required.keys.each { |k| return required[k] + optional if supplied.include? k }
       nil
     end
 
@@ -158,6 +159,11 @@ module Fitbit
     def get_url_parameters required, supplied
       required = get_dynamic_url_parameters(required, supplied) if required.is_a? Hash
       required
+    end
+
+    def get_optional_url_parameters required, supplied
+      return [] unless required['optional']
+      optional = required['optional'].select { |k,v| supplied.include? k }.values.flatten
     end
 
     def add_ids params, api_resources, auth_required
@@ -519,8 +525,12 @@ module Fitbit
         :http_method         => 'get',
         :request_headers     => ['Accept-Language'],
         :url_parameters           => {
-          'date'             => ['user', '-', '<resource-path>', 'date', '<date>'],
-          'start-time'       => ['user', '-', '<resource-path>', 'date', '<date>', '<start-time>', '<end-time>'],
+          'end-date'  => ['user', '-', '<resource-path>', 'date', '<base-date>', '<end-date>'],
+          'period'    => ['user', '-', '<resource-path>', 'date', '<base-date>', '<period>'],
+          'optional'  => {
+            'detail-level'  => [ '<detail-level>' ],
+            'start-time'    => ['time', '<start-time>', '<end-time>']
+          },
         },
       },
       'api-get-invites' => {
