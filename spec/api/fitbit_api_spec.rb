@@ -84,6 +84,27 @@ describe Fitbit::Api do
     end
   end
 
+  context 'Missing URL parameters when API method supports multiple dynamic urls when method supports optional URL parameters' do
+    before(:each) do
+      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@date_range[1]}.#{@response_format}"
+      @params = {
+        'api-method'          => 'API-Get-Intraday-Time-Series',
+        'base-date'           => @date_range[0],
+        'end-date'            => @date_range[1],
+        'period'              => @period,
+        'response-format'     => @response_format,
+        'resource-path'       => @resource_path,
+      }
+    end
+
+    it 'should create API-Get-Intraday-Time-Series <base-date>/<end-date> OAuth request' do
+      @params.delete('period')
+      @params.delete('end-date')
+      error_message = "api-get-intraday-time-series requires 1 of 2 options: (1) [\"resource-path\", \"base-date\", \"end-date\"] (2) [\"resource-path\", \"base-date\", \"period\"] You supplied: [\"api-method\", \"base-date\", \"response-format\", \"resource-path\"]."
+      lambda { subject.api_call(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret) }.should raise_error(RuntimeError, error_message)
+    end
+  end
+
   context 'Missing required auth tokens or user-id' do
     it 'Raises Error: <api-method> requires user auth_token and auth_secret' do
       @api_method = 'api-accept-invite'
@@ -463,19 +484,6 @@ describe Fitbit::Api do
       @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@date_range[1]}/15min/time/#{@time_range[0]}/#{@time_range[1]}.#{@response_format}"
       oauth_authenticated :get, @api_url, @consumer_key, @consumer_secret, @params, @auth_token, @auth_secret
     end
-
-#    it 'should create API-Get-Intraday-Time-Series <base-date>/<period> OAuth request' do
-#      @params.delete('end-date')
-#      @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@period}.#{@response_format}"
-#      oauth_authenticated :get, @api_url, @consumer_key, @consumer_secret, @params, @auth_token, @auth_secret
-#    end
-#
-#    it 'should create API-Get-Intraday-Time-Series <base-date>/<period> OAuth request with user-id instead of auth tokens' do
-#      @params.delete('end-date')
-#      @params['user-id'] = @fitbit_id
-#      @api_url = "/1/user/#{@fitbit_id}/#{@resource_path}/date/#{@date_range[0]}/#{@period}.#{@response_format}"
-#      oauth_unauthenticated :get, @api_url, @consumer_key, @consumer_secret, @params
-#    end
   end
 
   context 'API-Delete-Subscription method' do

@@ -110,6 +110,8 @@ module Fitbit
     def get_dynamic_url_error required, supplied
       required_array = get_dynamic_url_parameters(required, supplied)
       required_array = get_url_parameters_variables(required_array) if required_array
+      required = required.dup if required.keys.include? 'optional'
+      required.delete('optional')
       return nil unless required_array & supplied != required_array  
       error = "requires 1 of #{required.length} options: "
       required.keys.each_with_index do |k,i|
