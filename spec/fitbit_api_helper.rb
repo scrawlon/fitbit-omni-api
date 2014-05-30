@@ -36,100 +36,30 @@ module FitbitApiHelper
     end
   end
 
-  def helpful_errors supplied_api_method, error_type, supplied
+  def helpful_errors supplied_api_method, error_type, required="", supplied=""
     api_method = supplied_api_method.downcase
-    required = get_required_data(api_method, error_type)
-    if error_type == 'url_parameters'
-      required = get_dynamic_url_parameters(required, supplied) if required.is_a? Hash
-      required_data = get_url_parameters(required)
-    else
-      required_data = get_required_post_parameters(required, error_type)
-    end
 
     case error_type
     when 'post_parameters'
-      missing_data = required_data - supplied
-      error = "requires POST parameters #{required_data}. You're missing #{missing_data}."
+      missing_data = required - supplied
+      error = "requires POST parameters #{required}. You're missing #{missing_data}."
     when 'exclusive_too_many'
-      extra_data = required_data.join(' AND ')
-      error = "allows only one of these POST parameters #{required_data}. You used #{extra_data}."
+      extra_data = required.join(' AND ')
+      error = "allows only one of these POST parameters #{required}. You used #{extra_data}."
     when 'exclusive_too_few'
-      error = "requires one of these POST parameters: #{required_data}."
+      error = "requires one of these POST parameters: #{required}."
     when 'required_if'
-      error = get_required_if_error(required_data, supplied)
+      error = "requires POST parameter #{required} when you use POST parameter #{supplied}."
     when 'one_required'
-      error = "requires at least one of the following POST parameters: #{required_data}."
+      error = "requires at least one of the following POST parameters: #{required}."
     when 'url_parameters'
       error = get_url_parameters_error(required, required_data, supplied)
     when 'resource_path'
       error = get_resource_path_error(supplied)
-    else
-      error = "is not a valid api method."
+    when 'invalid'
+      error = "is not a valid Fitbit API method."
     end
     "#{api_method} " + error
-  end
-
-  def get_required_data api_method, error_type
-    data_type = 'post_parameters' unless error_type == 'url_parameters' or error_type == 'resource_path'
-    data_type ||= error_type
-    fitbit_methods = subject.get_fitbit_methods
-    fitbit_methods[api_method][data_type.to_sym] if fitbit_methods[api_method]
-  end
-
-  def get_required_if_error required, supplied
-    required.each do |k,v|
-      if supplied.include? k and !supplied.include? v
-        return "requires POST parameter #{v} when you use POST parameter #{k}."
-      end
-    end
-  end
-
-  def get_required_post_parameters required, error_type
-    if error_type == 'post_parameters'
-      required['required']
-    elsif error_type == 'exclusive_too_many' or error_type == 'exclusive_too_few'
-      required['exclusive']
-    else
-      required[error_type]
-    end
-  end
-
-  def get_url_parameters url_parameters 
-    url_parameters = url_parameters.select { |x| x.include? "<" }
-    url_parameters = url_parameters.map { |x| x.delete "<>" } if url_parameters
-    url_parameters ||= nil
-  end
-
-  def get_dynamic_url_parameters required, supplied
-    required = required.keys.each { |k| return required[k] if supplied.include? k }
-    nil
-  end
-
-  def get_url_parameters_error required, required_data, supplied
-    if required.is_a? Hash
-      count = 1
-      error = "requires 1 of #{required.length} options: "
-      required.keys.each do |x|
-        error << "(#{count}) #{required[x]} "
-        count += 1
-      end
-      error << "You supplied: #{supplied}"
-    else
-      error = "requires #{required_data}. You're missing #{required-supplied}."
-    end
-    error
-  end
-
-  def get_resource_paths
-    fitbit_resource_paths = subject.get_resource_paths
-  end
-
-  def get_resource_path_error supplied
-    resource_path = supplied['resource-path']
-    fitbit_resource_paths = subject.get_resource_paths
-    if resource_path and !fitbit_resource_paths.include? resource_path
-      "is not a valid Fitbit api-get-time-series resource-path."
-    end
   end
     
   def oauth_unauthenticated http_method, api_url, consumer_key, consumer_secret, params

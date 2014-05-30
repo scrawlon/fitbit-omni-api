@@ -31,7 +31,7 @@ describe Fitbit::Api do
   context 'Invalid Fitbit API method' do
     it 'Raises Error: <api-method> is not a valid Fitbit API method' do
       @params = { 'api-method' => 'API-Search-Fudd' }
-      error_message = "#{@params['api-method'].downcase} is not a valid Fitbit API method."
+      error_message = helpful_errors(@params['api-method'], 'invalid')
       lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
@@ -121,7 +121,7 @@ describe Fitbit::Api do
     end
 
     it 'Raises Error: <api-method> requires POST parameters <required>, You\'re missing <required-supplied>.' do
-      error_message = helpful_errors(@params['api-method'], 'post_parameters', @params.keys)
+      error_message = helpful_errors(@params['api-method'], 'post_parameters', ['accept'], @params.keys)
       lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
@@ -142,7 +142,7 @@ describe Fitbit::Api do
     it 'Raises Error: <api-method> requires <missing_parameter> when you use <current_parameter>.' do
       @params.delete('activityId')
       @params['activityName'] = @activity_name
-      error_message = helpful_errors(@params['api-method'], 'required_if', @params.keys)
+      error_message = helpful_errors(@params['api-method'], 'required_if', 'manualCalories', 'activityName')
       lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
@@ -160,7 +160,7 @@ describe Fitbit::Api do
 
     it 'Raises Error: <api-method> requires at least one of the following POST parameters <one_required>.' do
       @params.delete('bicep')
-      error_message = helpful_errors(@params['api-method'], 'one_required', @params.keys)
+      error_message = helpful_errors(@params['api-method'], 'one_required', ['bicep','calf','chest','fat','forearm','hips','neck','thigh','waist','weight'])
       lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
@@ -182,7 +182,7 @@ describe Fitbit::Api do
       it 'Raises Error: <api-method> allows only one of these POST parameters: <exclusive>. You used <supplied>.' do
         @params['activityName'] = @fitbit_id
         @params['manualCalories'] = '1000'
-        error_message = helpful_errors(@params['api-method'], 'exclusive_too_many', @params.keys)
+        error_message = helpful_errors(@params['api-method'], 'exclusive_too_many', ['activityId', 'activityName'])
         lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
       end
     end
@@ -190,7 +190,7 @@ describe Fitbit::Api do
     context 'When none of the exclusive parameters are included' do
       it 'Raises Error: <api-method> requires one of these POST parameters: <exclusive>.' do
         @params.delete('activityId')
-        error_message = helpful_errors(@params['api-method'], 'exclusive_too_few', @params.keys)
+        error_message = helpful_errors(@params['api-method'], 'exclusive_too_few', ['activityId', 'activityName'])
         lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
       end
     end
