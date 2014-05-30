@@ -116,7 +116,7 @@ module Fitbit
         url_parameters = get_url_parameters_variables(required[k])
         error << "(#{i+1}) #{url_parameters} "
       end
-      error << "You supplied: #{supplied}"
+      error << "You supplied: #{supplied}."
     end
 
     def get_dynamic_url_parameters required, supplied
@@ -180,12 +180,9 @@ module Fitbit
 
     def get_post_parameters params, fitbit, http_method
       return nil if http_method != 'post' or is_subscription? params['api-method']
-      not_post_parameters = [:request_headers]
-      ignore = ['api-method', 'response-format']
-      not_post_parameters.each do |x|
-        fitbit[x].each { |y| ignore.push(y) } if fitbit[x] 
-      end
-      post_parameters = params.select { |k,v| !ignore.include? k }
+      fitbit_post_parameters = []
+      fitbit[:post_parameters].each_value { |v| fitbit_post_parameters.push v }
+      post_parameters = params.select { |k,v| fitbit_post_parameters.flatten.include? k }
 
       "?" + OAuth::Helper.normalize(post_parameters)
     end
@@ -256,6 +253,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'required' => ['name', 'defaultFoodMeasurementUnitId', 'defaultServingSize', 'calories'],
+          'optional' => ['formType', 'description'],
         },
         :request_headers     => ['Accept-Locale'],
         :url_parameters           => ['foods'],
@@ -334,6 +332,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'required' => ['time', 'enabled', 'recurring', 'weekDays'],
+          'optional' => ['label', 'snoozeLength', 'snoozeCount', 'vibe'],
         },
         :request_headers     => ['Accept-Language'],
         :url_parameters           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms'],
@@ -353,6 +352,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'required' => ['time', 'enabled', 'recurring', 'weekDays', 'snoozeLength', 'snoozeCount'],
+          'optional' => ['label', 'vibe'],
         },
         :request_headers     => ['Accept-Language'],
         :url_parameters           => ['user', '-', 'devices', 'tracker', '<device-id>', 'alarms', '<alarm-id>'],
@@ -579,6 +579,7 @@ module Fitbit
           'exclusive' => ['activityId', 'activityName'], 
           'required'  => ['startTime', 'durationMillis', 'date'],
           'required_if'  => { 'activityName' => 'manualCalories' },
+          'optional'  => ['distanceUnit'],
         },
         :request_headers     => ['Accept-Locale', 'Accept-Language'],
         :url_parameters           => ['user', '-', 'activities'],
@@ -588,6 +589,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'required' => ['systolic', 'diastolic', 'date'],
+          'optional' => ['time'],
         },
         :url_parameters           => ['user', '-', 'bp'],
       },
@@ -596,6 +598,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'required' => ['fat', 'date'],
+          'optional' => ['time'],
         },
         :url_parameters           => ['user', '-', 'body', 'log', 'fat'],
       },
@@ -614,6 +617,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'required' => ['weight', 'date'],
+          'optional' => ['time'],
         },
         :request_headers     => ['Accept-Language'],
         :url_parameters           => ['user', '-', 'body', 'log', 'weight'],
@@ -624,6 +628,7 @@ module Fitbit
         :post_parameters     => {
           'exclusive' => ['foodId', 'foodName'], 
           'required'  => ['mealTypeId', 'unitId', 'amount', 'date'],
+          'optional'  => ['brandName', 'calories', 'favorite'],
         },
         :request_headers     => ['Accept-Locale'],
         :url_parameters           => ['user', '-', 'foods', 'log'],
@@ -635,6 +640,7 @@ module Fitbit
           'exclusive' => ['hbac1c', 'tracker'], 
           'required'  => ['date'],
           'required_if'  => { 'tracker' => 'glucose' },
+          'optional' => ['time'],
         },
         :request_headers     => ['Accept-Language'],
         :url_parameters           => ['user', '-', 'glucose'],
@@ -644,6 +650,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'required' => ['tracker', 'heartRate', 'date'],
+          'optional' => ['time'],
         },
         :url_parameters           => ['user', '-', 'heart'],
       },
@@ -660,6 +667,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'required' => ['amount', 'date'],
+          'optional' => ['unit'],
         },
         :request_headers     => ['Accept-Language'],
         :url_parameters           => ['user', '-', 'foods', 'log', 'water'],
@@ -701,6 +709,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'exclusive' => ['calories', 'intensity'],
+          'optional'  => ['personalized'],
         },
         :request_headers     => ['Accept-Locale', 'Accept-Language'],
         :url_parameters           => ['user', '-', 'foods', 'log', 'goal'],
@@ -723,6 +732,7 @@ module Fitbit
         :http_method         => 'post',
         :post_parameters     => {
           'required' => ['startDate', 'startWeight'],
+          'optional' => ['weight'],
         },
         :url_parameters           => ['user', '-', 'body', 'log', 'weight', 'goal'],
       },

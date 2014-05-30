@@ -60,7 +60,7 @@ describe Fitbit::Api do
 
     it 'Raises Error: <api-method> requires <required>. You\'re missing <required-supplied>.' do
       @params.delete('activity-log-id')
-      error_message = helpful_errors(@params['api-method'], 'url_parameters', @params.keys)
+      error_message = "#{@params['api-method'].downcase} requires [\"activity-log-id\"]. You\'re missing [\"activity-log-id\"]."
       lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
@@ -78,7 +78,7 @@ describe Fitbit::Api do
 
     it "Raises Error: <api-method> requires 1 of 3 options: (1) ['date'] (2) ['base-date', 'end-date'] (3) ['base-date', 'period']" do
       @params.delete('date')
-      error_message = helpful_errors(@params['api-method'], 'url_parameters', @params.keys)
+      error_message = "api-get-body-fat requires 1 of 3 options: (1) [\"date\"] (2) [\"base-date\", \"end-date\"] (3) [\"base-date\", \"period\"] You supplied: [\"api-method\", \"response-format\"]." 
       lambda { subject.api_call(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret) }.should raise_error(RuntimeError, error_message)
     end
   end
@@ -309,7 +309,7 @@ describe Fitbit::Api do
       expect(api_call.class).to eq(Net::HTTPOK)
     end
 
-    it 'POST request with dynamic url parameter and one required POST parameter' do
+    it 'with dynamic url parameter and one required POST parameter' do
       @api_url = "/1/user/-/friends/invitations/#{@fitbit_id}.#{@response_format}"
       @params = {
         'api-method'          => 'API-Accept-Invite',

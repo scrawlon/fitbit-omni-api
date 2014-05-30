@@ -145,7 +145,7 @@ module FitbitApiHelper
   end
 
   def get_url_with_post_parameters url, params, ignore
-    params.keys.each { |k| params.delete(k) if ignore.include? k } 
+    params.delete_if { |k,v| ignore.include? k }
     url + "?" + OAuth::Helper.normalize(params)
   end
 end
