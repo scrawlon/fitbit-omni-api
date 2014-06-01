@@ -96,7 +96,7 @@ module Fitbit
       return nil unless required
       if required.is_a? Hash
         error = get_dynamic_url_error(required, supplied)
-      elsif
+      else
         required = get_url_parameters_variables(required)
         error = "requires #{required}. You're missing #{required-supplied}." if required - supplied != []
       end
@@ -107,9 +107,8 @@ module Fitbit
       return nil unless missing_dynamic_url_parameters?(required, supplied)
       required = required.dup
       required.delete('optional')
-      options = ""
-      required.keys.each_with_index { |x,i| options << "(#{i+1}) #{get_url_parameters_variables(required[x])} " }
-      error = "requires 1 of #{required.length} options: #{options.rstrip}. You supplied: #{supplied}."
+      options = required.keys.each_with_index.map { |x,i| "(#{i+1}) #{get_url_parameters_variables(required[x])}" }.join(' ')
+      error = "requires 1 of #{required.length} options: #{options}. You supplied: #{supplied}."
     end
 
     def missing_dynamic_url_parameters? required, supplied

@@ -48,9 +48,8 @@ module FitbitApiHelper
       error = "requires POST parameters #{required}. You're missing #{required - supplied}."
     when 'dynamic-url'
       total = required.length
-      options = ""
-      required.each_with_index { |x,i| options << "(#{i+1}) #{x} " }
-      error = "requires 1 of #{total} options: #{options.rstrip}. You supplied: #{supplied}."
+      options = required.map { |x| "(#{required.index(x)+1}) #{x}" }.join(' ')
+      error = "requires 1 of #{total} options: #{options}. You supplied: #{supplied}."
     when 'exclusive_too_many'
       extra_data = required.join(' AND ')
       error = "allows only one of these POST parameters: #{required}. You used #{extra_data}."
