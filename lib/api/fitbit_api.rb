@@ -107,7 +107,7 @@ module Fitbit
       return nil unless missing_dynamic_url_parameters?(required, supplied)
       required = required.dup
       required.delete('optional')
-      options = required.keys.each_with_index.map { |x,i| "(#{i+1}) #{get_url_parameters_variables(required[x])}" }.join(' ')
+      options = required.keys.map.with_index(1) { |x,i| "(#{i}) #{get_url_parameters_variables(required[x])}" }.join(' ')
       error = "requires 1 of #{required.length} options: #{options}. You supplied: #{supplied}."
     end
 
