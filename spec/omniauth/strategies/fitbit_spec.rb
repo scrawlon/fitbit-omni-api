@@ -74,19 +74,19 @@ describe "OmniAuth::Strategies::Fitbit" do
       subject.info[:gender].should eq("MALE")
     end
 
-    it 'returns the correct gender from raw_info' do
+    it 'returns the correct about me from raw_info' do
       subject.info[:about_me].should eq("I live in Kansas City, MO")
     end
 
-    it 'returns the correct gender from raw_info' do
+    it 'returns the correct city from raw_info' do
       subject.info[:city].should eq("Kansas City")
     end
 
-    it 'returns the correct gender from raw_info' do
+    it 'returns the correct state from raw_info' do
       subject.info[:state].should eq("MO")
     end
 
-    it 'returns the correct gender from raw_info' do
+    it 'returns the correct country from raw_info' do
       subject.info[:country].should eq("US")
     end
   end

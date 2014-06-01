@@ -27,13 +27,13 @@ module Fitbit
     end
 
     def verify_api_call params, fitbit_api_method, auth_token, auth_secret
-      api_error = "is not a valid Fitbit API method."
-      api_error = get_error_message(params.keys, fitbit_api_method, auth_token, auth_secret) if fitbit_api_method
-      raise "#{params['api-method']} " + api_error if api_error
+      error = get_error_message(params.keys, fitbit_api_method, auth_token, auth_secret)
+      raise "#{params['api-method']} " + error if error
     end
 
     def get_error_message params_keys, fitbit_api_method, auth_token, auth_secret
-      error = missing_post_parameters_error fitbit_api_method[:post_parameters], params_keys
+      error = "is not a valid Fitbit API method." unless fitbit_api_method
+      error = missing_post_parameters_error fitbit_api_method[:post_parameters], params_keys unless error
       error = missing_url_parameters_error fitbit_api_method[:url_parameters], params_keys unless error
       error = missing_auth_tokens_error fitbit_api_method[:auth_required], params_keys, auth_token, auth_secret unless error
       return error if error
@@ -45,7 +45,7 @@ module Fitbit
         supplied_required = v & supplied unless k == 'required_if'
         case k
         when 'required'
-          error = missing_required_post_parameters_error(v, supplied)
+          error = missing_required_post_parameters_error(v, supplied, supplied_required)
         when 'exclusive'
           error = missing_exclusive_post_parameters_error(v, supplied_required)
         when 'one_required'
@@ -58,18 +58,16 @@ module Fitbit
       nil
     end
 
-    def missing_required_post_parameters_error required, supplied
-      supplied_required = required & supplied
+    def missing_required_post_parameters_error required, supplied, supplied_required
       "requires POST parameters #{required}. You're missing #{required-supplied}." if supplied_required != required 
     end
 
     def missing_exclusive_post_parameters_error required, supplied_required
-      supplied_length = supplied_required.length
-      supplied_required_string = supplied_required.join(' AND ')
-      if supplied_length < 1
+      total_supplied = supplied_required.length
+      if total_supplied < 1
         error = "requires one of these POST parameters: #{required}." 
-      elsif supplied_length > 1
-        error = "allows only one of these POST parameters #{required}. You used #{supplied_required_string}." 
+      elsif total_supplied > 1
+        error = "allows only one of these POST parameters: #{required}. You used #{supplied_required.join(' AND ')}." 
       end
       error ||= nil
     end
@@ -79,10 +77,8 @@ module Fitbit
     end
 
     def missing_required_if_post_parameters_error required, supplied
-      required.each do |key,val|
-        if supplied.include? key and !supplied.include? val
-          return "requires POST parameter #{val} when you use POST parameter #{key}."
-        end
+      required.each do |k,v|
+        return "requires POST parameter #{v} when you use POST parameter #{k}." if supplied.include? k and !supplied.include? v
       end
     end
 
@@ -108,29 +104,32 @@ module Fitbit
     end
 
     def get_dynamic_url_error required, supplied
-      required_array = get_dynamic_url_parameters(required, supplied)
-      required_array = get_url_parameters_variables(required_array) if required_array
-      required = required.dup if required.keys.include? 'optional'
+      return nil unless missing_dynamic_url_parameters?(required, supplied)
+      required = required.dup
       required.delete('optional')
-      return nil unless required_array & supplied != required_array  
-      error = "requires 1 of #{required.length} options: "
-      required.keys.each_with_index do |k,i|
-        url_parameters = get_url_parameters_variables(required[k])
-        error << "(#{i+1}) #{url_parameters} "
-      end
-      error << "You supplied: #{supplied}."
+      options = ""
+      required.keys.each_with_index { |x,i| options << "(#{i+1}) #{get_url_parameters_variables(required[x])} " }
+      error = "requires 1 of #{required.length} options: #{options.rstrip}. You supplied: #{supplied}."
+    end
+
+    def missing_dynamic_url_parameters? required, supplied
+      required = get_dynamic_url_parameters(required, supplied)
+      required = get_url_parameters_variables(required) if required
+      required & supplied != required  
     end
 
     def get_dynamic_url_parameters required, supplied
       optional = get_optional_url_parameters(required, supplied)
-      required = required.keys.each { |k| return required[k] + optional if supplied.include? k }
+      required.keys.each { |k| return required[k] + optional if supplied.include? k }
       nil
     end
 
     def get_url_parameters_variables url_parameters
-      url_parameters = url_parameters.select { |x| x.include? "<" }
-      url_parameters = url_parameters.map { |x| x.delete "<>" } if url_parameters
-      url_parameters ||= nil
+      url_parameters.select { |x| x.include? "<" }.map { |x| x.delete "<>" } if has_url_variables? url_parameters
+    end
+
+    def has_url_variables? url_parameters
+      url_parameters.each{ |x| return true if x.include? "<" }
     end
 
     def build_request consumer_key, consumer_secret, auth_token, auth_secret
@@ -152,10 +151,10 @@ module Fitbit
 
     def get_url_resources params, fitbit_api_method
       api_resources = get_url_parameters(fitbit_api_method[:url_parameters], params.keys)
-      api_ids = get_url_parameters_variables(api_resources) 
-      dynamic_url = add_ids(params, api_resources, fitbit_api_method[:auth_required]) if api_ids or params['user-id']
-      dynamic_url ||= api_resources
-      dynamic_url.join("/")
+      if has_url_variables? api_resources or params['user-id'] 
+        api_resources = insert_dynamic_url_parameters(params, api_resources, fitbit_api_method[:auth_required])
+      end
+      api_resources.join("/")
     end
 
     def get_url_parameters required, supplied
@@ -168,20 +167,20 @@ module Fitbit
       optional = required['optional'].select { |k,v| supplied.include? k }.values.flatten
     end
 
-    def add_ids params, api_resources, auth_required
-      api_resources_copy = api_resources.dup
-      api_resources_copy.each_with_index do |x, i|
-        id = x.delete "<>"
+    def insert_dynamic_url_parameters params, api_resources, auth_required
+      api_resources = api_resources.dup
+      api_resources.each_with_index do |x,i|
+        url_variable = x.delete "<>"
 
         if x == '-' and auth_required == 'user-id' and params['user-id']
-          api_resources_copy[i] = params['user-id']
-        elsif id == 'collection-path' and params[id] == 'all'
-          api_resources_copy.delete(x)
-        elsif id == 'subscription-id' and params['collection-path'] != 'all'
-          api_resources_copy[i] = params[id] + "-" + params['collection-path']
-          api_resources_copy.delete('<collection-path>')
-        elsif params.keys.include? id and !params.keys.include? x
-          api_resources_copy[i] = params[id]
+          api_resources[i] = params['user-id']
+        elsif url_variable == 'collection-path' and params[url_variable] == 'all'
+          api_resources.delete(x)
+        elsif url_variable == 'subscription-id' and params['collection-path'] != 'all'
+          api_resources[i] = params[url_variable] + "-" + params['collection-path']
+          api_resources.delete('<collection-path>')
+        elsif params.keys.include? url_variable and !params.keys.include? x
+          api_resources[i] = params[url_variable]
         end
       end
     end

@@ -40,16 +40,20 @@ module FitbitApiHelper
     end
   end
 
-  def helpful_errors supplied_api_method, error_type, required="", supplied=""
-    api_method = supplied_api_method.downcase
+  def helpful_errors api_method, error_type, required="", supplied=""
+    api_method.downcase!
 
     case error_type
     when 'post_parameters'
-      missing_data = required - supplied
-      error = "requires POST parameters #{required}. You're missing #{missing_data}."
+      error = "requires POST parameters #{required}. You're missing #{required - supplied}."
+    when 'dynamic-url'
+      total = required.length
+      options = ""
+      required.each_with_index { |x,i| options << "(#{i+1}) #{x} " }
+      error = "requires 1 of #{total} options: #{options.rstrip}. You supplied: #{supplied}."
     when 'exclusive_too_many'
       extra_data = required.join(' AND ')
-      error = "allows only one of these POST parameters #{required}. You used #{extra_data}."
+      error = "allows only one of these POST parameters: #{required}. You used #{extra_data}."
     when 'exclusive_too_few'
       error = "requires one of these POST parameters: #{required}."
     when 'required_if'
@@ -57,7 +61,7 @@ module FitbitApiHelper
     when 'one_required'
       error = "requires at least one of the following POST parameters: #{required}."
     when 'url_parameters'
-      error = get_url_parameters_error(required, required_data, supplied)
+      error = "requires #{required}. You\'re missing #{required - supplied}."
     when 'resource_path'
       error = get_resource_path_error(supplied)
     when 'invalid'

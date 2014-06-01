@@ -61,7 +61,7 @@ describe Fitbit::Api do
 
     it 'Raises Error: <api-method> requires <required>. You\'re missing <required-supplied>.' do
       @params.delete('activity-log-id')
-      error_message = "#{@params['api-method'].downcase} requires [\"activity-log-id\"]. You\'re missing [\"activity-log-id\"]."
+      error_message = helpful_errors(@params['api-method'], 'url_parameters', ['activity-log-id'], @params.keys)
       lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
@@ -79,12 +79,12 @@ describe Fitbit::Api do
 
     it "Raises Error: <api-method> requires 1 of 3 options: (1) ['date'] (2) ['base-date', 'end-date'] (3) ['base-date', 'period']" do
       @params.delete('date')
-      error_message = "api-get-body-fat requires 1 of 3 options: (1) [\"date\"] (2) [\"base-date\", \"end-date\"] (3) [\"base-date\", \"period\"] You supplied: [\"api-method\", \"response-format\"]." 
+      error_message = helpful_errors(@params['api-method'], 'dynamic-url', [['date'], ['base-date', 'end-date'], ['base-date', 'period']], @params.keys)
       lambda { subject.api_call(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret) }.should raise_error(RuntimeError, error_message)
     end
   end
 
-  context 'Missing URL parameters when API method supports multiple dynamic urls when method supports optional URL parameters' do
+  context 'Missing URL parameters when API method supports multiple dynamic urls and optional URL parameters' do
     before(:each) do
       @api_url = "/1/user/-/#{@resource_path}/date/#{@date_range[0]}/#{@date_range[1]}.#{@response_format}"
       @params = {
@@ -97,10 +97,10 @@ describe Fitbit::Api do
       }
     end
 
-    it 'should create API-Get-Intraday-Time-Series <base-date>/<end-date> OAuth request' do
+    it "Raises Error: <api-method> requires 1 of 2 options: (1) ['resource-path', 'base-date', 'end-date'] (2) ['resource-path', 'base-date', 'period']." do
       @params.delete('period')
       @params.delete('end-date')
-      error_message = "api-get-intraday-time-series requires 1 of 2 options: (1) [\"resource-path\", \"base-date\", \"end-date\"] (2) [\"resource-path\", \"base-date\", \"period\"] You supplied: [\"api-method\", \"base-date\", \"response-format\", \"resource-path\"]."
+      error_message = helpful_errors(@params['api-method'], 'dynamic-url', [['resource-path', 'base-date', 'end-date'], ['resource-path', 'base-date', 'period']], @params.keys)
       lambda { subject.api_call(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret) }.should raise_error(RuntimeError, error_message)
     end
   end
