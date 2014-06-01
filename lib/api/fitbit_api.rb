@@ -136,18 +136,6 @@ module Fitbit
       OAuth::AccessToken.new fitbit.consumer, auth_token, auth_secret
     end
 
-    def build_url params, fitbit_api_method, http_method
-      api = {
-        :version            => params['api_version'] ? params['api_version'] : @@api_version,
-        :url_resources      => get_url_resources(params, fitbit_api_method),
-        :response_format    => params['response-format'] ? params['response-format'].downcase : 'xml',
-        :post_parameters    => get_post_parameters(params, fitbit_api_method, http_method),
-        :query              => uri_encode_query(params['query']),
-      }
-
-      "/#{api[:version]}/#{api[:url_resources]}.#{api[:response_format]}#{api[:query]}#{api[:post_parameters]}"
-    end
-
     def get_url_resources params, fitbit_api_method
       api_resources = get_url_parameters(fitbit_api_method[:url_parameters], params.keys)
       if has_url_variables? api_resources or params['user-id'] 
@@ -186,16 +174,8 @@ module Fitbit
 
     def get_post_parameters params, fitbit, http_method
       return nil if http_method != 'post' or is_subscription? params['api-method']
-      fitbit_post_parameters = []
-      fitbit[:post_parameters].each_value { |v| fitbit_post_parameters.push v }
-      post_parameters = params.select { |k,v| fitbit_post_parameters.flatten.include? k }
-
+      post_parameters = params.select { |k,v| fitbit[:post_parameters].values.flatten.include? k }
       "?" + OAuth::Helper.normalize(post_parameters)
-    end
-    
-    def get_request_headers params, fitbit
-      request_headers = fitbit[:request_headers]
-      params.select { |k,v| request_headers.include? k }
     end
 
     def is_subscription? api_method
@@ -209,13 +189,29 @@ module Fitbit
     def send_api_request params, fitbit, access_token
       http_method = fitbit[:http_method]
       request_url = build_url(params, fitbit, http_method)
-      request_headers = get_request_headers(params, fitbit) if fitbit[:request_headers]
+      request_headers = get_request_headers(params, fitbit[:request_headers])
 
       if http_method == 'get' or http_method == 'delete'
         access_token.request( http_method, "http://api.fitbit.com#{request_url}", request_headers )
       else
-        access_token.request( http_method, "http://api.fitbit.com#{request_url}", "",  request_headers )
+        access_token.request( http_method, "http://api.fitbit.com#{request_url}", "", request_headers )
       end
+    end
+
+    def build_url params, fitbit_api_method, http_method
+      api = {
+        :version            => params['api_version'] ? params['api_version'] : @@api_version,
+        :url_resources      => get_url_resources(params, fitbit_api_method),
+        :response_format    => params['response-format'] ? params['response-format'].downcase : 'xml',
+        :post_parameters    => get_post_parameters(params, fitbit_api_method, http_method),
+        :query              => uri_encode_query(params['query']),
+      }
+      "/#{api[:version]}/#{api[:url_resources]}.#{api[:response_format]}#{api[:query]}#{api[:post_parameters]}"
+    end
+    
+    def get_request_headers params, request_headers
+      return nil unless request_headers
+      params.select { |k,v| request_headers.include? k }
     end
 
     @@api_version = 1
