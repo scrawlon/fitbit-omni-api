@@ -7,7 +7,7 @@ end
 
 describe Fitbit::Api do
   subject do
-    Fitbit::Api.new({})
+    Fitbit::Api
   end
 
   before(:all) do
@@ -33,7 +33,7 @@ describe Fitbit::Api do
     it 'Raises Error: <api-method> is not a valid Fitbit API method' do
       @params = { 'api-method' => 'API-Search-Fudd' }
       error_message = helpful_errors(@params['api-method'], 'invalid')
-      lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
+      lambda { subject.request(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
 
@@ -62,7 +62,7 @@ describe Fitbit::Api do
     it 'Raises Error: <api-method> requires <required>. You\'re missing <required-supplied>.' do
       @params.delete('activity-log-id')
       error_message = helpful_errors(@params['api-method'], 'url_parameters', ['activity-log-id'], @params.keys)
-      lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
+      lambda { subject.request(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
 
@@ -80,7 +80,7 @@ describe Fitbit::Api do
     it "Raises Error: <api-method> requires 1 of 3 options: (1) ['date'] (2) ['base-date', 'end-date'] (3) ['base-date', 'period']" do
       @params.delete('date')
       error_message = helpful_errors(@params['api-method'], 'dynamic-url', [['date'], ['base-date', 'end-date'], ['base-date', 'period']], @params.keys)
-      lambda { subject.api_call(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret) }.should raise_error(RuntimeError, error_message)
+      lambda { subject.request(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret) }.should raise_error(RuntimeError, error_message)
     end
   end
 
@@ -101,7 +101,7 @@ describe Fitbit::Api do
       @params.delete('period')
       @params.delete('end-date')
       error_message = helpful_errors(@params['api-method'], 'dynamic-url', [['resource-path', 'base-date', 'end-date'], ['resource-path', 'base-date', 'period']], @params.keys)
-      lambda { subject.api_call(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret) }.should raise_error(RuntimeError, error_message)
+      lambda { subject.request(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret) }.should raise_error(RuntimeError, error_message)
     end
   end
 
@@ -116,7 +116,7 @@ describe Fitbit::Api do
         'response-format'     => @response_format,
       }
       error_message = "#{@api_method} requires user auth_token and auth_secret."
-      lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
+      lambda { subject.request(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
 
     it "Raises Error: <api-method> requires user auth_token and auth_secret, unless you include [\"user-id\"]." do
@@ -128,7 +128,7 @@ describe Fitbit::Api do
         'response-format'     => @response_format,
       }
       error_message = "#{@api_method} requires user auth_token and auth_secret, unless you include [\"user-id\"]."
-      lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
+      lambda { subject.request(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
 
@@ -144,7 +144,7 @@ describe Fitbit::Api do
 
     it 'Raises Error: <api-method> requires POST parameters <required>, You\'re missing <required-supplied>.' do
       error_message = helpful_errors(@params['api-method'], 'post_parameters', ['accept'], @params.keys)
-      lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
+      lambda { subject.request(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
 
@@ -165,7 +165,7 @@ describe Fitbit::Api do
       @params.delete('activityId')
       @params['activityName'] = @activity_name
       error_message = helpful_errors(@params['api-method'], 'required_if', 'manualCalories', 'activityName')
-      lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
+      lambda { subject.request(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
 
@@ -183,7 +183,7 @@ describe Fitbit::Api do
     it 'Raises Error: <api-method> requires at least one of the following POST parameters <one_required>.' do
       @params.delete('bicep')
       error_message = helpful_errors(@params['api-method'], 'one_required', ['bicep','calf','chest','fat','forearm','hips','neck','thigh','waist','weight'])
-      lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
+      lambda { subject.request(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
     end
   end
 
@@ -205,7 +205,7 @@ describe Fitbit::Api do
         @params['activityName'] = @fitbit_id
         @params['manualCalories'] = '1000'
         error_message = helpful_errors(@params['api-method'], 'exclusive_too_many', ['activityId', 'activityName'])
-        lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
+        lambda { subject.request(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
       end
     end
 
@@ -213,7 +213,7 @@ describe Fitbit::Api do
       it 'Raises Error: <api-method> requires one of these POST parameters: <exclusive>.' do
         @params.delete('activityId')
         error_message = helpful_errors(@params['api-method'], 'exclusive_too_few', ['activityId', 'activityName'])
-        lambda { subject.api_call(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
+        lambda { subject.request(@consumer_key, @consumer_secret, @params) }.should raise_error(RuntimeError, error_message)
       end
     end
   end
@@ -240,8 +240,8 @@ describe Fitbit::Api do
           req.headers[k] = v
         end
       end 
-      api_call = subject.api_call(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret)
-      expect(api_call.class).to eq(Net::HTTPOK)
+      request = subject.request(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret)
+      expect(request.class).to eq(Net::HTTPOK)
     end
 
     it 'GET request with dynamic url parameter' do
@@ -327,8 +327,8 @@ describe Fitbit::Api do
           req.headers[k] = v
         end
       end 
-      api_call = subject.api_call(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret)
-      expect(api_call.class).to eq(Net::HTTPOK)
+      request = subject.request(@consumer_key, @consumer_secret, @params, @auth_token, @auth_secret)
+      expect(request.class).to eq(Net::HTTPOK)
     end
 
     it 'with dynamic url parameter and one required POST parameter' do

@@ -71,14 +71,14 @@ module FitbitApiHelper
     
   def oauth_unauthenticated http_method, api_url, consumer_key, consumer_secret, params
     stub_request(http_method, "api.fitbit.com#{api_url}")
-    api_call = subject.api_call(consumer_key, consumer_secret, params)
-    expect(api_call.class).to eq(Net::HTTPOK)
+    request = subject.request(consumer_key, consumer_secret, params)
+    expect(request.class).to eq(Net::HTTPOK)
   end
     
   def oauth_authenticated http_method, api_url, consumer_key, consumer_secret, params, auth_token, auth_secret
     stub_request(http_method, "api.fitbit.com#{api_url}")
-    api_call = subject.api_call(consumer_key, consumer_secret, params, auth_token, auth_secret)
-    expect(api_call.class).to eq(Net::HTTPOK)
+    request = subject.request(consumer_key, consumer_secret, params, auth_token, auth_secret)
+    expect(request.class).to eq(Net::HTTPOK)
   end
 
   def get_url_with_post_parameters url, params, ignore
