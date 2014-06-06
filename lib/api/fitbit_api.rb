@@ -36,7 +36,7 @@ module Fitbit
         error = missing_post_parameters_error fitbit_api_method[:post_parameters], params_keys unless error
         error = missing_url_parameters_error fitbit_api_method[:url_parameters], params_keys unless error
         error = missing_auth_tokens_error fitbit_api_method[:auth_required], params_keys, auth_token, auth_secret unless error
-        return error if error
+        error ||= nil
       end
 
       def missing_post_parameters_error required, supplied
@@ -64,12 +64,12 @@ module Fitbit
 
       def missing_exclusive_post_parameters_error required, supplied_required
         total_supplied = supplied_required.length
+        return nil if total_supplied == 1
         if total_supplied < 1
-          error = "requires one of these POST parameters: #{required}." 
+          "requires one of these POST parameters: #{required}." 
         elsif total_supplied > 1
-          error = "allows only one of these POST parameters: #{required}. You used #{supplied_required.join(' AND ')}." 
+          "allows only one of these POST parameters: #{required}. You used #{supplied_required.join(' AND ')}." 
         end
-        error ||= nil
       end
 
       def missing_one_required_post_parameters_error required, supplied_required
@@ -95,12 +95,11 @@ module Fitbit
       def missing_url_parameters_error required, supplied
         return nil unless required
         if required.is_a? Hash
-          error = get_dynamic_url_error(required, supplied)
+          get_dynamic_url_error(required, supplied)
         else
           required = get_url_parameters_variables(required)
-          error = "requires #{required}. You're missing #{required-supplied}." if required - supplied != []
+          required - supplied != [] ? "requires #{required}. You're missing #{required-supplied}." : nil
         end
-        error ||= nil
       end
 
       def get_dynamic_url_error required, supplied
@@ -108,7 +107,7 @@ module Fitbit
         required = required.dup
         required.delete('optional')
         options = required.keys.map.with_index(1) { |x,i| "(#{i}) #{get_url_parameters_variables(required[x])}" }.join(' ')
-        error = "requires 1 of #{required.length} options: #{options}. You supplied: #{supplied}."
+        "requires 1 of #{required.length} options: #{options}. You supplied: #{supplied}."
       end
 
       def missing_dynamic_url_parameters? required, supplied
@@ -137,11 +136,11 @@ module Fitbit
       end
 
       def get_url_resources params, fitbit_api_method
-        api_resources = get_url_parameters(fitbit_api_method[:url_parameters], params.keys)
-        if has_url_variables? api_resources or params['user-id'] 
-          api_resources = insert_dynamic_url_parameters(params, api_resources, fitbit_api_method[:auth_required])
+        url_parameters = get_url_parameters(fitbit_api_method[:url_parameters], params.keys)
+        if has_url_variables? url_parameters or params['user-id'] 
+          url_parameters = insert_dynamic_url_parameters(params, url_parameters, fitbit_api_method[:auth_required])
         end
-        api_resources.join("/")
+        url_parameters.join("/")
       end
 
       def get_url_parameters required, supplied
@@ -154,22 +153,44 @@ module Fitbit
         optional = required['optional'].select { |k,v| supplied.include? k }.values.flatten
       end
 
-      def insert_dynamic_url_parameters params, api_resources, auth_required
-        api_resources = api_resources.dup
-        api_resources.each_with_index do |x,i|
+      def insert_dynamic_url_parameters params, url_parameters, auth_required
+        url_parameters.map do |x|
           url_variable = x.delete "<>"
 
-          if x == '-' and auth_required == 'user-id' and params['user-id']
-            api_resources[i] = params['user-id']
-          elsif url_variable == 'collection-path' and params[url_variable] == 'all'
-            api_resources.delete(x)
-          elsif url_variable == 'subscription-id' and params['collection-path'] != 'all'
-            api_resources[i] = params[url_variable] + "-" + params['collection-path']
-            api_resources.delete('<collection-path>')
-          elsif params.keys.include? url_variable and !params.keys.include? x
-            api_resources[i] = params[url_variable]
+          if is_subscription_variable? url_variable
+            insert_subscription_variable(params, url_variable)
+          elsif x == '-'
+            insert_user_id(auth_required, params['user-id'])
+          elsif params.include? url_variable and !params.include? x
+            params[url_variable]
+          else
+            x
           end
+        end - [nil]
+      end
+
+      def is_subscription_variable? url_variable
+        subscription_variables = ['subscription-id', 'collection-path']
+        subscription_variables.include? url_variable
+      end
+
+      def insert_subscription_variable params, url_variable
+        if url_variable == 'collection-path'
+          insert_var = params['collection-path'] if params['collection-path'] != 'all'
+        elsif url_variable == 'subscription-id' 
+          insert_var = params[url_variable]
+          insert_var = "#{insert_var}-#{params['collection-path']}" if params['collection-path'] != 'all'
         end
+        insert_var ||= nil
+      end
+
+      def insert_user_id auth_required, user_id
+        (auth_required == 'user-id' and user_id) ? user_id : '-'
+      end
+
+      def insert_subscription_type_or_id url_variable, params_url_variable, collection_path
+        subscription_type = "#{params_url_variable}-#{collection_path}" if url_variable == 'subscription-id' and collection_path != 'all'
+        subscription_type ||= nil
       end
 
       def get_post_parameters params, fitbit, http_method
@@ -272,7 +293,7 @@ module Fitbit
           :auth_required       => true,
           :http_method         => 'post',
           :request_headers     => ['X-Fitbit-Subscriber-Id'],
-          :url_parameters           => ['user', '-', '<collection-path>', 'apiSubscriptions', '<subscription-id>', '<collection-path>']
+          :url_parameters           => ['user', '-', '<collection-path>', 'apiSubscriptions', '<subscription-id>']
         },
         'api-delete-activity-log' => {
           :auth_required       => true,
@@ -322,7 +343,7 @@ module Fitbit
         'api-delete-subscription' => {
           :auth_required       => 'user-id',
           :http_method         => 'delete',
-          :url_parameters           => ['user', '-', '<collection-path>', 'apiSubscriptions', '<subscription-id>', '<collection-path>']
+          :url_parameters           => ['user', '-', '<collection-path>', 'apiSubscriptions', '<subscription-id>']
         },
         'api-delete-water-log' => {
           :auth_required       => true,
