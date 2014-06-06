@@ -175,22 +175,15 @@ module Fitbit
       end
 
       def insert_subscription_variable params, url_variable
-        if url_variable == 'collection-path'
-          insert_var = params['collection-path'] if params['collection-path'] != 'all'
-        elsif url_variable == 'subscription-id' 
-          insert_var = params[url_variable]
-          insert_var = "#{insert_var}-#{params['collection-path']}" if params['collection-path'] != 'all'
+        if params['collection-path'] == 'all'
+          url_variable == 'subscription-id' ? params[url_variable] : nil
+        else
+          url_variable == 'subscription-id' ? "#{params[url_variable]}-#{params['collection-path']}" : params[url_variable]
         end
-        insert_var ||= nil
       end
 
       def insert_user_id auth_required, user_id
         (auth_required == 'user-id' and user_id) ? user_id : '-'
-      end
-
-      def insert_subscription_type_or_id url_variable, params_url_variable, collection_path
-        subscription_type = "#{params_url_variable}-#{collection_path}" if url_variable == 'subscription-id' and collection_path != 'all'
-        subscription_type ||= nil
       end
 
       def get_post_parameters params, fitbit, http_method
