@@ -93,7 +93,6 @@ module Fitbit
       end
 
       def missing_url_parameters_error required, supplied
-        return nil unless required
         if required.is_a? Hash
           get_dynamic_url_error(required, supplied)
         else
@@ -103,11 +102,13 @@ module Fitbit
       end
 
       def get_dynamic_url_error required, supplied
-        return nil unless missing_dynamic_url_parameters?(required, supplied)
-        required = required.dup
-        required.delete('optional')
-        options = required.keys.map.with_index(1) { |x,i| "(#{i}) #{get_url_parameters_variables(required[x])}" }.join(' ')
-        "requires 1 of #{required.length} options: #{options}. You supplied: #{supplied}."
+        if missing_dynamic_url_parameters?(required, supplied)
+          required = required.dup.delete_if { |k,v| k == 'optional' }
+          options = required.keys.map.with_index(1) { |x,i| "(#{i}) #{get_url_parameters_variables(required[x])}" }.join(' ')
+          "requires 1 of #{required.length} options: #{options}. You supplied: #{supplied}."
+        else
+          nil
+        end
       end
 
       def missing_dynamic_url_parameters? required, supplied
@@ -193,8 +194,7 @@ module Fitbit
       end
       
       def get_request_headers params, request_headers
-        return nil unless request_headers
-        params.select { |k,v| request_headers.include? k }
+        request_headers ? params.select { |k,v| request_headers.include? k } : nil
       end
 
       def build_url params, fitbit_api_method, http_method
@@ -217,9 +217,12 @@ module Fitbit
       end
 
       def get_post_parameters params, fitbit, http_method
-        return nil if http_method != 'post' or is_subscription? params['api-method']
-        post_parameters = params.select { |k,v| fitbit[:post_parameters].values.flatten.include? k }
-        "?#{OAuth::Helper.normalize(post_parameters)}"
+        if http_method == 'post' and !is_subscription? params['api-method']
+          post_parameters = params.select { |k,v| fitbit[:post_parameters].values.flatten.include? k }
+          "?#{OAuth::Helper.normalize(post_parameters)}"
+        else
+          nil
+        end
       end
 
       def uri_encode_query query
