@@ -137,8 +137,7 @@ module Fitbit
       end
 
       def get_url_parameters required, supplied
-        required = get_dynamic_url_parameters(required, supplied) if required.is_a? Hash
-        required
+        required.is_a?(Hash) ? get_dynamic_url_parameters(required, supplied) : required
       end
 
       def get_optional_url_parameters required, supplied
@@ -170,15 +169,11 @@ module Fitbit
       end
 
       def insert_subscription_variable params, url_variable
-        if params['collection-path'] == 'all'
-          url_variable == 'subscription-id' ? params[url_variable] : nil
+        if url_variable == 'subscription-id'
+          params['collection-path'] == 'all' ? params[url_variable] : "#{params[url_variable]}-#{params['collection-path']}"
         else
-          url_variable == 'subscription-id' ? "#{params[url_variable]}-#{params['collection-path']}" : params[url_variable]
+          params['collection-path'] != 'all' ? params[url_variable] : nil
         end
-      end
-
-      def is_subscription? api_method
-        api_method == 'api-create-subscription' or api_method == 'api-delete-subscription'
       end
 
       def send_api_request params, fitbit, access_token
@@ -227,6 +222,10 @@ module Fitbit
 
       def uri_encode_query query
         query ? "?#{OAuth::Helper.normalize({ 'query' => query })}" : ""
+      end
+
+      def is_subscription? api_method
+        api_method == 'api-create-subscription' or api_method == 'api-delete-subscription'
       end
 
       @@api_version = 1
