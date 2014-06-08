@@ -3,7 +3,7 @@ require 'omniauth-fitbit'
 module Fitbit
   class Api < OmniAuth::Strategies::OAuth
     class << self 
-      def request consumer_key, consumer_secret, params, auth_token="", auth_secret=""
+      def request consumer_key, consumer_secret, params, auth_token=nil, auth_secret=nil
         begin 
           fitbit_api_method = get_api_method(params['api-method'])
           verify_api_call(params, fitbit_api_method, auth_token, auth_secret)
@@ -21,8 +21,7 @@ module Fitbit
       private 
 
       def get_api_method api_method
-        return nil unless api_method and api_method.is_a? String
-        api_method.downcase!
+        api_method.downcase! if api_method.is_a? String
         @@fitbit_methods[api_method]
       end
 
@@ -40,7 +39,7 @@ module Fitbit
       end
 
       def missing_post_parameters_error required, supplied
-        return nil unless required
+        required = {} unless required and required.is_a? Hash
         required.each do |k,v|
           supplied_required = v & supplied unless k == 'required_if'
           case k
@@ -64,11 +63,12 @@ module Fitbit
 
       def missing_exclusive_post_parameters_error required, supplied_required
         total_supplied = supplied_required.length
-        return nil if total_supplied == 1
         if total_supplied < 1
           "requires one of these POST parameters: #{required}." 
         elsif total_supplied > 1
           "allows only one of these POST parameters: #{required}. You used #{supplied_required.join(' AND ')}." 
+        else
+          nil
         end
       end
 
@@ -83,12 +83,12 @@ module Fitbit
       end
 
       def missing_auth_tokens_error auth_required, params_keys, auth_token, auth_secret
-        return nil unless auth_required
-        no_auth_tokens = auth_token == "" or auth_secret == ""
-        if no_auth_tokens and auth_required == 'user-id'
-          "requires user auth_token and auth_secret, unless you include [\"user-id\"]." unless params_keys.include? 'user-id'
+        no_auth_tokens = !auth_token or !auth_secret
+        if !auth_required
+          nil
         elsif no_auth_tokens
-          "requires user auth_token and auth_secret."
+          error = "requires user auth_token and auth_secret"
+          !params_keys.include? 'user-id' and auth_required == 'user-id' ? "#{error}, unless you include [\"user-id\"]." : "#{error}."
         end
       end
 
@@ -135,38 +135,32 @@ module Fitbit
         OAuth::AccessToken.new fitbit.consumer, auth_token, auth_secret
       end
 
-      def get_url_resources params, fitbit_api_method
-        url_parameters = get_url_parameters(fitbit_api_method[:url_parameters], params.keys)
-        if has_url_variables? url_parameters or params['user-id'] 
-          url_parameters = insert_dynamic_url_parameters(params, url_parameters, fitbit_api_method[:auth_required])
-        end
-        url_parameters.join("/")
-      end
-
       def get_url_parameters required, supplied
         required = get_dynamic_url_parameters(required, supplied) if required.is_a? Hash
         required
       end
 
       def get_optional_url_parameters required, supplied
-        return [] unless required['optional']
-        optional = required['optional'].select { |k,v| supplied.include? k }.values.flatten
+        optional = [] unless required['optional']
+        optional ? optional : required['optional'].select { |k,v| supplied.include? k }.values.flatten
       end
 
       def insert_dynamic_url_parameters params, url_parameters, auth_required
         url_parameters.map do |x|
           url_variable = x.delete "<>"
 
-          if is_subscription_variable? url_variable
-            insert_subscription_variable(params, url_variable)
-          elsif x == '-'
+          if x == '-'
             insert_user_id(auth_required, params['user-id'])
           elsif params.include? url_variable and !params.include? x
-            params[url_variable]
+            is_subscription_variable?(url_variable) ? insert_subscription_variable(params, url_variable) : params[url_variable]
           else
             x
           end
         end - [nil]
+      end
+
+      def insert_user_id auth_required, user_id
+        (auth_required == 'user-id' and user_id) ? user_id : '-'
       end
 
       def is_subscription_variable? url_variable
@@ -182,34 +176,25 @@ module Fitbit
         end
       end
 
-      def insert_user_id auth_required, user_id
-        (auth_required == 'user-id' and user_id) ? user_id : '-'
-      end
-
-      def get_post_parameters params, fitbit, http_method
-        return nil if http_method != 'post' or is_subscription? params['api-method']
-        post_parameters = params.select { |k,v| fitbit[:post_parameters].values.flatten.include? k }
-        "?" + OAuth::Helper.normalize(post_parameters)
-      end
-
       def is_subscription? api_method
         api_method == 'api-create-subscription' or api_method == 'api-delete-subscription'
       end
 
-      def uri_encode_query query
-        query ? "?" + OAuth::Helper.normalize({ 'query' => query }) : ""
-      end
-
       def send_api_request params, fitbit, access_token
         http_method = fitbit[:http_method]
-        request_url = build_url(params, fitbit, http_method)
         request_headers = get_request_headers(params, fitbit[:request_headers])
+        request_url = build_url(params, fitbit, http_method)
 
         if http_method == 'get' or http_method == 'delete'
           access_token.request( http_method, "http://api.fitbit.com#{request_url}", request_headers )
         else
           access_token.request( http_method, "http://api.fitbit.com#{request_url}", "", request_headers )
         end
+      end
+      
+      def get_request_headers params, request_headers
+        return nil unless request_headers
+        params.select { |k,v| request_headers.include? k }
       end
 
       def build_url params, fitbit_api_method, http_method
@@ -222,10 +207,23 @@ module Fitbit
         }
         "/#{api[:version]}/#{api[:url_resources]}.#{api[:response_format]}#{api[:query]}#{api[:post_parameters]}"
       end
-      
-      def get_request_headers params, request_headers
-        return nil unless request_headers
-        params.select { |k,v| request_headers.include? k }
+
+      def get_url_resources params, fitbit_api_method
+        url_parameters = get_url_parameters(fitbit_api_method[:url_parameters], params.keys)
+        if has_url_variables? url_parameters or params['user-id'] 
+          url_parameters = insert_dynamic_url_parameters(params, url_parameters, fitbit_api_method[:auth_required])
+        end
+        url_parameters.join("/")
+      end
+
+      def get_post_parameters params, fitbit, http_method
+        return nil if http_method != 'post' or is_subscription? params['api-method']
+        post_parameters = params.select { |k,v| fitbit[:post_parameters].values.flatten.include? k }
+        "?#{OAuth::Helper.normalize(post_parameters)}"
+      end
+
+      def uri_encode_query query
+        query ? "?#{OAuth::Helper.normalize({ 'query' => query })}" : ""
       end
 
       @@api_version = 1
