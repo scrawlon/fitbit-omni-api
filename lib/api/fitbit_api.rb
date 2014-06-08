@@ -27,19 +27,31 @@ module Fitbit
 
       def verify_api_call params, fitbit_api_method, auth_token, auth_secret
         error = get_error_message(params.keys, fitbit_api_method, auth_token, auth_secret)
-        raise "#{params['api-method']} " + error if error
+        raise "#{params['api-method']} #{error}" if error
       end
 
       def get_error_message params_keys, fitbit_api_method, auth_token, auth_secret
-        error = "is not a valid Fitbit API method." unless fitbit_api_method
-        error = missing_post_parameters_error fitbit_api_method[:post_parameters], params_keys unless error
-        error = missing_url_parameters_error fitbit_api_method[:url_parameters], params_keys unless error
-        error = missing_auth_tokens_error fitbit_api_method[:auth_required], params_keys, auth_token, auth_secret unless error
-        error ||= nil
+        error_types = [:post_parameters, :url_parameters, :auth_required]
+        if !fitbit_api_method
+          "is not a valid Fitbit API method."
+        else
+          error_types.each do |x|
+            case x
+            when :post_parameters
+              error = missing_post_parameters_error(fitbit_api_method[x], params_keys)
+            when :url_parameters
+              error = missing_url_parameters_error(fitbit_api_method[x], params_keys)
+            when :auth_required
+              error = missing_auth_tokens_error(fitbit_api_method[x], params_keys, auth_token, auth_secret)
+            end
+            return error if error
+          end
+          nil
+        end
       end
 
       def missing_post_parameters_error required, supplied
-        required = {} unless required and required.is_a? Hash
+        required = {} unless required.is_a? Hash
         required.each do |k,v|
           supplied_required = v & supplied unless k == 'required_if'
           case k
@@ -83,12 +95,14 @@ module Fitbit
       end
 
       def missing_auth_tokens_error auth_required, params_keys, auth_token, auth_secret
+        error = "requires user auth_token and auth_secret"
         no_auth_tokens = !auth_token or !auth_secret
         if !auth_required
           nil
-        elsif no_auth_tokens
-          error = "requires user auth_token and auth_secret"
-          !params_keys.include? 'user-id' and auth_required == 'user-id' ? "#{error}, unless you include [\"user-id\"]." : "#{error}."
+        elsif no_auth_tokens and auth_required != 'user-id'
+          "#{error}."
+        elsif no_auth_tokens and auth_required == 'user-id'
+          !params_keys.include?('user-id') ? "#{error}, unless you include [\"user-id\"]." : nil
         end
       end
 
@@ -103,7 +117,7 @@ module Fitbit
 
       def get_dynamic_url_error required, supplied
         if missing_dynamic_url_parameters?(required, supplied)
-          required = required.dup.delete_if { |k,v| k == 'optional' }
+          required = required.select { |k,v| k != 'optional' }
           options = required.keys.map.with_index(1) { |x,i| "(#{i}) #{get_url_parameters_variables(required[x])}" }.join(' ')
           "requires 1 of #{required.length} options: #{options}. You supplied: #{supplied}."
         else
