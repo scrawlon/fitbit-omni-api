@@ -20,7 +20,7 @@ Each API request needs:
 * A params Hash with api-method and required parameters 
 * Optionally, Fitbit auth tokens or user-id if required 
 
-An example of an authenticated API call: 
+Thhis is the structure of an authenticated API call: 
 
 ```ruby
 Fitbit::Api.request(
@@ -35,21 +35,17 @@ Fitbit::Api.request(
 This gem supports the Fitbit Resource Access API and the Fitbit Subscriptions API.
 
 To access the Resource Access API, consult the API docs and provide the required parameters. For example,
-the API-Search-Foods method requires 'api-version', 'query' and 'response-format'. There's also an optional
-Request Header parameter, 'Accept-Locale'. A call to API-Search-Foods might look like this:
+the API-Search-Foods method requires _'api-version'_, _'query'_ and _'response-format'_, plus there's an optional
+_'Accept-Locale'_ Request Header parameter.
+
+A call to API-Search-Foods might look like this:
 
 ```ruby
 def fitbit_foods_search
-  params = {
-    'api-method'      => 'api-search-foods',
-    'query'           => 'buffalo chicken',
-    'response-format' => 'json',
-    'Accept-Locale'   => 'en_US',
-  }
   request = Fitbit::Api.request(
     'consumer_key',
     'consumer_secret',
-    params,
+    params={'api-method'=>'api-search-foods','query'=>'buffalo chicken','Accept-Locale'=>'en_US'}
     'auth_token',
     'auth_secret'
   )
@@ -57,16 +53,14 @@ def fitbit_foods_search
 end
 ```
 
-A few notes: 'api-version' defaults to '1' and can be omitted from Fitbit-Omni-Api calls.
-If you omit the 'response-format', the response will be in the default xml format.
-Some authenticated API methods can be accessed without auth tokens, if you supply a user's
-user-id (see the API docs for details).
+## Defaults:
+'api-version' defaults to '1'
+'response-format' defaults to 'xml'
 
-To access the Subscription API, two new api methods were created just for this gem:
-API-Create-Subscription and API-Delete-Subscription. These api methods only exist in this gem,
-not the Fitbit API. If you consult the Subscription API docs for adding and deleting subscriptions,
-and supply the required parameters, these two api methods work just as described for the
-Resource Access API. NOTE: To subscribe to ALL of a user's changes, make 'collection-path' = 'all'.
+## Manage Fitbit Subscriptions
+Use API-Create-Subscription and API-Delete-Subscription API methods to to access the Subscription API.
+Consult the Subscription API docs to discover the the required parameters.
+To subscribe to ALL of a user's changes, make 'collection-path' = 'all'.
 
 ## Copyright
 
