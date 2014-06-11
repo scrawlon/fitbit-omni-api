@@ -55,7 +55,7 @@ end
 
 ### Fitbit Subscriptions API
 Use API-Create-Subscription and API-Delete-Subscription API methods to to access the Subscription API.
-Consult the Subscription API docs to discover the the required parameters.
+Consult the Subscription API docs to discover the required parameters.
 To subscribe to ALL of a user's changes, make 'collection-path' = 'all'.
 
 ### Fitbit Partner API
