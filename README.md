@@ -16,11 +16,11 @@ gem 'fitbit-omni-api'
 The gem class is simply 'Fitbit::Api' and Fitbit Api requests are made with the 'Fitbit::Api.request' method.
 
 Each API request needs:
-* your Fitbit consumer_key and consumer_secret (acquired from [dev.fitbit.com](http://dev.fitbit.cpm))
+* Your Fitbit consumer_key and consumer_secret (acquired from [dev.fitbit.com](http://dev.fitbit.cpm))
 * A params Hash with api-method and required parameters 
 * Optionally, Fitbit auth tokens or user-id if required 
 
-Thhis is the structure of an authenticated API call: 
+This is the structure of an authenticated API call: 
 
 ```ruby
 Fitbit::Api.request(
@@ -53,10 +53,6 @@ def fitbit_foods_search
 end
 ```
 
-### Defaults:
-* 'api-version' defaults to '1'
-* 'response-format' defaults to 'xml'
-
 ### Fitbit Subscriptions API
 Use API-Create-Subscription and API-Delete-Subscription API methods to to access the Subscription API.
 Consult the Subscription API docs to discover the the required parameters.
@@ -65,6 +61,10 @@ To subscribe to ALL of a user's changes, make 'collection-path' = 'all'.
 ### Fitbit Partner API
 These features are only accessible with approved Fitbit developer accounts. 
 
+### Defaults:
+* 'api-version' defaults to '1'
+* 'response-format' defaults to 'xml'
+
 ### Copyright
 
-Copyright (c) 2012 TK Gospodinov, (c) Scott McGrath 2013. See [LICENSE](https://github.com/tkgospodinov/omniauth-fitbit/blob/master/LICENSE.md) for details.
+Copyright (c) 2012 TK Gospodinov, (c) Scott McGrath 2013. See [LICENSE](https://github.com/scrawlon/fitbit-omni-api/blob/master/LICENSE.md) for details.
