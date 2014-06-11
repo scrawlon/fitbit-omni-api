@@ -32,7 +32,7 @@ Fitbit::Api.request(
 )
 ```
 
-This gem supports the Fitbit Resource Access API and the Fitbit Subscriptions API.
+This gem supports the Fitbit Resource Access API, Fitbit Subscriptions API and Fitbit Partner API.
 
 To access the Resource Access API, consult the API docs and provide the required parameters. For example,
 the API-Search-Foods method requires _'api-version'_, _'query'_ and _'response-format'_, plus there's an optional
@@ -57,10 +57,13 @@ end
 * 'api-version' defaults to '1'
 * 'response-format' defaults to 'xml'
 
-### Manage Fitbit Subscriptions
+### Fitbit Subscriptions API
 Use API-Create-Subscription and API-Delete-Subscription API methods to to access the Subscription API.
 Consult the Subscription API docs to discover the the required parameters.
 To subscribe to ALL of a user's changes, make 'collection-path' = 'all'.
+
+### Fitbit Partner API
+These features are only accessible with approved Fitbit developer accounts. 
 
 ### Copyright
 
