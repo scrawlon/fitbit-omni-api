@@ -1,52 +1,32 @@
-# Fitbit OmniAuth Strategy
+# Fitbit-Omni-Api
 
-This gem is an OmniAuth 1.0+ Strategy for the [Fitbit API](https://wiki.fitbit.com/display/API/OAuth+Authentication+in+the+Fitbit+API).
+This gem uses the [OmniAuth-Fitbit Strategy](https://github.com/tkgospodinov/omniauth-fitbit) for authentication.
+See that repo for more info.
 
-## Usage
+## Accessing the Fitbit API
+## There are breaking changes in this version.
 
-Add the strategy to your `Gemfile`:
+## Installation
 
+Add the gem to your Gemfile
 ```ruby
 gem 'fitbit-omni-api'
 ```
 
-Then integrate the strategy into your middleware:
+The gem class is simply 'Fitbit::Api' and Fitbit Api requests are made with the 'Fitbit::Api.request' method.
 
-```ruby
-use OmniAuth::Builder do
-  provider :fitbit, 'consumer_key', 'consumer_secret'
-end
-```
-
-In Rails, create a new file under config/initializers called omniauth.rb to plug the strategy into your middleware stack.
-
-```ruby
-Rails.application.config.middleware.use OmniAuth::Builder do
-  provider :fitbit, 'consumer_key', 'consumer_secret'
-end
-```
-
-To register your application with Fitbit and obtain a consumer key and secret, go to the [Fitbit application registration](https://dev.fitbit.com/apps/new).
-
-For additional information about OmniAuth, visit [OmniAuth wiki](https://github.com/intridea/omniauth/wiki).
-
-For a short tutorial on how to use OmniAuth in your Rails application, visit [this tutsplus.com tutorial](http://net.tutsplus.com/tutorials/ruby/how-to-use-omniauth-to-authenticate-your-users/).
-
-## Accessing the Fitbit API
-
-An API call can be instantiated with `Fitbit::Api.new({}).api_call()`  
-Each call requires:
-* Fitbit consumer_key and consumer_secret
-* A params Hash containing the Fitbit API method, plus all required parameters 
-* Optionally, for authenticated API calls, your user's Fitbit auth token and auth secret
+Each API request needs:
+* your Fitbit consumer_key and consumer_secret (acquired from [dev.fitbit.com](http://dev.fitbit.cpm))
+* A params Hash with api-method and required parameters 
+* Optionally, Fitbit auth tokens or user-id if required 
 
 An example of an authenticated API call: 
 
 ```ruby
-Fitbit::Api.new({}).api_call(
+Fitbit::Api.request(
   'consumer_key',
   'consumer_secret',
-  params,
+  params = { 'api-method' => 'api-method-here', 'start-time' => '00:00' }
   'auth_token',
   'auth_secret'
 )
@@ -66,7 +46,7 @@ def fitbit_foods_search
     'response-format' => 'json',
     'Accept-Locale'   => 'en_US',
   }
-  request = Fitbit::Api.new({}).api_call(
+  request = Fitbit::Api.request(
     'consumer_key',
     'consumer_secret',
     params,
