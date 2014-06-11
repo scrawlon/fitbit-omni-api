@@ -4,9 +4,9 @@ This gem uses the [OmniAuth-Fitbit Strategy](https://github.com/tkgospodinov/omn
 See that repo for more info.
 
 ## Accessing the Fitbit API
-## There are breaking changes in this version.
+### There are breaking changes in this version.
 
-## Installation
+### Installation
 
 Add the gem to your Gemfile
 ```ruby
@@ -36,7 +36,7 @@ This gem supports the Fitbit Resource Access API and the Fitbit Subscriptions AP
 
 To access the Resource Access API, consult the API docs and provide the required parameters. For example,
 the API-Search-Foods method requires _'api-version'_, _'query'_ and _'response-format'_, plus there's an optional
-_'Accept-Locale'_ Request Header parameter.
+_'Accept-Locale'_  Request Header parameter.
 
 A call to API-Search-Foods might look like this:
 
@@ -53,15 +53,15 @@ def fitbit_foods_search
 end
 ```
 
-## Defaults:
-'api-version' defaults to '1'
-'response-format' defaults to 'xml'
+### Defaults:
+* 'api-version' defaults to '1'
+* 'response-format' defaults to 'xml'
 
-## Manage Fitbit Subscriptions
+### Manage Fitbit Subscriptions
 Use API-Create-Subscription and API-Delete-Subscription API methods to to access the Subscription API.
 Consult the Subscription API docs to discover the the required parameters.
 To subscribe to ALL of a user's changes, make 'collection-path' = 'all'.
 
-## Copyright
+### Copyright
 
 Copyright (c) 2012 TK Gospodinov, (c) Scott McGrath 2013. See [LICENSE](https://github.com/tkgospodinov/omniauth-fitbit/blob/master/LICENSE.md) for details.
