@@ -1,4 +1,4 @@
-# Fitbit-Omni-Api
+# UNMAINTAINED -- Fitbit-Omni-Api
 
 This gem uses the [OmniAuth-Fitbit Strategy](https://github.com/tkgospodinov/omniauth-fitbit) for authentication.
 See that repo for more info.
